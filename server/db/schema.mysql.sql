@@ -1,0 +1,164 @@
+CREATE TABLE IF NOT EXISTS admin_users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(160) NOT NULL,
+  email VARCHAR(190) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at VARCHAR(40) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  token VARCHAR(128) PRIMARY KEY,
+  admin_id INT NOT NULL,
+  expires_at VARCHAR(40) NOT NULL,
+  created_at VARCHAR(40) NOT NULL,
+  INDEX idx_sessions_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS profile (
+  id INT PRIMARY KEY,
+  name VARCHAR(160) NOT NULL DEFAULT '',
+  headline VARCHAR(190) NOT NULL DEFAULT '',
+  class_name VARCHAR(80) NOT NULL DEFAULT '',
+  competence VARCHAR(190) NOT NULL DEFAULT '',
+  hero_tagline TEXT,
+  bio TEXT,
+  avatar_url VARCHAR(500) NOT NULL DEFAULT '',
+  location VARCHAR(190) NOT NULL DEFAULT '',
+  availability VARCHAR(190) NOT NULL DEFAULT '',
+  email VARCHAR(190) NOT NULL DEFAULT '',
+  github VARCHAR(300) NOT NULL DEFAULT '',
+  instagram VARCHAR(300) NOT NULL DEFAULT '',
+  linkedin VARCHAR(300) NOT NULL DEFAULT '',
+  cv_url VARCHAR(500) NOT NULL DEFAULT '',
+  career_goal TEXT,
+  education LONGTEXT,
+  interests LONGTEXT,
+  organizations LONGTEXT,
+  plk LONGTEXT,
+  updated_at VARCHAR(40) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS projects (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(190) NOT NULL,
+  slug VARCHAR(190) NOT NULL DEFAULT '',
+  year VARCHAR(20) NOT NULL DEFAULT '',
+  category VARCHAR(120) NOT NULL DEFAULT '',
+  summary TEXT,
+  description LONGTEXT,
+  problem LONGTEXT,
+  goal LONGTEXT,
+  tech LONGTEXT,
+  role LONGTEXT,
+  features LONGTEXT,
+  demo_url VARCHAR(500) NOT NULL DEFAULT '',
+  repo_url VARCHAR(500) NOT NULL DEFAULT '',
+  documentation LONGTEXT,
+  details LONGTEXT,
+  image_url VARCHAR(500) NOT NULL DEFAULT '',
+  gallery LONGTEXT,
+  featured TINYINT(1) NOT NULL DEFAULT 0,
+  published TINYINT(1) NOT NULL DEFAULT 1,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at VARCHAR(40) NOT NULL,
+  updated_at VARCHAR(40) NOT NULL,
+  INDEX idx_projects_published (published, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS skills (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(160) NOT NULL,
+  category VARCHAR(20) NOT NULL DEFAULT 'hard',
+  level INT NOT NULL DEFAULT 0,
+  note VARCHAR(300) NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS certificates (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(190) NOT NULL,
+  issuer VARCHAR(190) NOT NULL DEFAULT '',
+  year VARCHAR(20) NOT NULL DEFAULT '',
+  category VARCHAR(20) NOT NULL DEFAULT 'certificate',
+  description TEXT,
+  image_url VARCHAR(500) NOT NULL DEFAULT '',
+  documentation VARCHAR(500) NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS experiences (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  type VARCHAR(20) NOT NULL DEFAULT 'plk',
+  title VARCHAR(190) NOT NULL,
+  organization VARCHAR(190) NOT NULL DEFAULT '',
+  period VARCHAR(120) NOT NULL DEFAULT '',
+  description TEXT,
+  highlights LONGTEXT,
+  sort_order INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS testimonials (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(160) NOT NULL,
+  role VARCHAR(160) NOT NULL DEFAULT '',
+  type VARCHAR(20) NOT NULL DEFAULT 'friend',
+  organization VARCHAR(190) NOT NULL DEFAULT '',
+  quote TEXT NOT NULL,
+  avatar_url VARCHAR(500) NOT NULL DEFAULT '',
+  project_id INT NULL,
+  approved TINYINT(1) NOT NULL DEFAULT 1,
+  sort_order INT NOT NULL DEFAULT 0,
+  INDEX idx_testimonials_public (approved, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS project_feedback (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  project_id INT NOT NULL,
+  name VARCHAR(160) NOT NULL,
+  email VARCHAR(190) NOT NULL DEFAULT '',
+  rating TINYINT NOT NULL DEFAULT 5,
+  message TEXT NOT NULL,
+  approved TINYINT(1) NOT NULL DEFAULT 0,
+  created_at VARCHAR(40) NOT NULL,
+  INDEX idx_feedback_public (project_id, approved)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS posts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(190) NOT NULL,
+  slug VARCHAR(190) NOT NULL DEFAULT '',
+  excerpt TEXT,
+  content LONGTEXT,
+  cover_url VARCHAR(500) NOT NULL DEFAULT '',
+  tags LONGTEXT,
+  status VARCHAR(20) NOT NULL DEFAULT 'draft',
+  published_at VARCHAR(40) NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
+  INDEX idx_posts_status (status, published_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS models (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(190) NOT NULL,
+  slug VARCHAR(190) NOT NULL DEFAULT '',
+  pmx_url VARCHAR(500) NOT NULL DEFAULT '',
+  preview_url VARCHAR(500) NOT NULL DEFAULT '',
+  scale DOUBLE NOT NULL DEFAULT 0.08,
+  note TEXT,
+  active TINYINT(1) NOT NULL DEFAULT 0,
+  created_at VARCHAR(40) NOT NULL DEFAULT '',
+  INDEX idx_models_active (active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS messages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(160) NOT NULL,
+  email VARCHAR(190) NOT NULL DEFAULT '',
+  subject VARCHAR(190) NOT NULL DEFAULT '',
+  message TEXT NOT NULL,
+  type VARCHAR(20) NOT NULL DEFAULT 'contact',
+  approved TINYINT(1) NOT NULL DEFAULT 0,
+  created_at VARCHAR(40) NOT NULL,
+  read_at VARCHAR(40) NULL,
+  INDEX idx_messages_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

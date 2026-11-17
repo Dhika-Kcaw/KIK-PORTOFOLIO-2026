@@ -1,0 +1,31 @@
+{
+  "name": "museum-wangsheng",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "packageManager": "bun@1.4.2",
+  "scripts": {
+    "dev": "bun scripts/dev.js",
+    "dev:web": "vite",
+    "dev:api": "bun --watch server/index.js",
+    "dev:mobile": "bun scripts/dev.js --host",
+    "build": "vite build",
+    "preview": "bun server/index.js",
+    "start": "bun server/index.js",
+    "db:migrate": "bun server/db/migrate.js",
+    "db:seed": "bun server/db/seed.js",
+    "motions:check": "bun scripts/mixamo_to_mmd.js"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "svelte": "^5.43.2",
+    "vite": "^7.1.12"
+  },
+  "dependencies": {
+    "@moeru/three-mmd": "^0.2.0-beta.2",
+    "@moeru/three-mmd-physics-ammo": "0.2.0-beta.2",
+    "@moeru/three-mmd-physics-springbone": "0.2.0-beta.2",
+    "mysql2": "^3.24.6",
+    "three": "^0.187.0"
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.vite/
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+data/uploads/
+public/models/
+.env
+.env.local
+*.local
+.DS_Store
+Thumbs.db
