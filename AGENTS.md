@@ -4146,4 +4146,57 @@ lebih jujur daripada museum kosong.
   ter-push. Menghapusnya dari riwayat membutuhkan `git filter-repo`/rewrite + force-push,
   dan itu keputusan pemilik repo — bukan sesuatu yang dilakukan otomatis oleh perubahan ini.
 
+---
+
+### 49. CV Digital menampilkan berkas PDF yang dipasang admin
+
+`profile.cv_url` sudah ada sejak §13 sebagai field `file` di dashboard (unggahan PDF ke
+`/uploads`), tetapi panel CV dulu mengabaikan isinya: yang tampil selalu halaman rakitan
+`buildDocument()`, dan `cv_url` hanya muncul sebagai tautan unduh tambahan. Akibatnya
+admin bisa memasang CV resmi, tetapi pengunjung tetap membaca versi yang disusun dari
+database — dua dokumen berbeda untuk satu bagian.
+
+#### 49.1 Aturan yang dipakai sekarang
+
+| Keadaan `profile.cv_url` | Yang ditampilkan | Tombol simpan |
+| --- | --- | --- |
+| ada (URL `http(s)://` atau jalur `/uploads/…`) | **PDF itu sendiri**, disematkan di dalam bagian CV | **Unduh CV (PDF)** — mengunduh berkas yang dipasang, tanpa membuat PDF baru |
+| kosong / bukan URL | halaman CV rakitan seperti sebelumnya | **Cetak / Simpan PDF** — mencetak `buildDocument()` lewat iframe tersembunyi |
+
+Alasannya: satu bagian hanya boleh punya satu isi. Selama berkas resmi ada, isi museum
+tidak boleh “mengarang” CV tandingan yang bisa berbeda urutan, gaya, atau isinya.
+
+#### 49.2 Detail teknis (`src/ui/views/CvView.svelte`)
+
+- `cvFile` (`$derived.by`) menerima URL absolut **dan** jalur unggahan lokal mulai `/`,
+  karena `uploadFile()` di dashboard menyimpan hasil sebagai `/uploads/<hash>.pdf`.
+  Nilai lain (teks bebas) dianggap kosong, jadi tidak ada iframe yang menunjuk ke alamat
+  sampah.
+- `cvLabel` mengambil nama berkas dari URL untuk ditampilkan di kaki bingkai. Pembacaan
+  `decodeURIComponent` dibungkus `try/catch`: satu `%` nyasar tidak boleh mematikan panel.
+- PDF disematkan lewat `<iframe class="cv-pdf" src={`${cvFile}#view=FitH`}>` di dalam
+  `.cv-paper` — bingkai kertas yang sama dengan `.cv-sheet` (garis tinta, `box-shadow`
+  dalam, latar kertas) supaya tidak terasa seperti objek asing di panel. Tingginya
+  `clamp(380px, 62dvh, 760px)`, jadi tetap terbaca di ponsel tanpa memaksa pengguna
+  menggulir dua kali.
+- Tombol primer berubah peran, bukan bertambah: `printCv()` memeriksa `cvFile` lebih dulu
+  dan langsung mengunduh lewat anchor `download` (nama berkas `CV-<nama>.pdf`); hanya bila
+  berkas tidak ada ia menjalankan jalur cetak lama. Tidak ada dua tombol yang melakukan
+  hal mirip.
+- Tautan **Buka di tab baru** tetap disediakan di toolbar dan di kaki bingkai. Ini
+  jaring pengaman untuk peramban yang menolak menyematkan PDF (mis. `X-Frame-Options`
+  pada URL luar, atau penampil PDF yang dimatikan).
+- Kaki bingkai menyebut nama berkas dengan `text-overflow: ellipsis`, jadi nama panjang
+  tidak mendorong tautan keluar dari baris.
+
+#### 49.3 Verifikasi
+
+- Struktur blok `CvView.svelte` seimbang: `{#if}` 12/12, `{#each}` 6/6, `<section>` 6/6,
+  `<article>` 1/1, `<style>` 1/1; `safeHref` tidak lagi diimpor karena sudah tidak dipakai.
+- **Belum dijalankan di peramban** (shell mesin ini masih gagal di WSL). Yang perlu
+  dicoba: (1) unggah PDF di **Profil → Kontak & CV** lalu simpan → buka meja CV dan
+  pastikan isi PDF tampil di panel; (2) tekan **Unduh CV (PDF)** → berkas yang terunduh
+  adalah PDF yang dipasang, bukan dokumen rakitan; (3) kosongkan `cv_url` → panel kembali
+  ke halaman CV rakitan dan tombol **Cetak / Simpan PDF** memanggil dialog cetak.
+
 

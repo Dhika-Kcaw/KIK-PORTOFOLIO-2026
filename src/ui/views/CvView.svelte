@@ -1,5 +1,5 @@
 <script>
-  import { EXPERIENCE_LABEL, isUrl, safeHref } from '../panel-utils.js'
+  import { EXPERIENCE_LABEL, isUrl } from '../panel-utils.js'
 
   let { profile, data } = $props()
 
@@ -16,7 +16,38 @@
     ].filter(([, value]) => value),
   )
 
-  const hasCvFile = $derived(isUrl(profile.cv_url) || String(profile.cv_url ?? '').startsWith('/'))
+  /*
+   * CV punya dua jalur: berkas PDF yang dipasang admin, atau halaman yang
+   * disusun dari data museum. Jalur pertama menang — isinya ditampilkan apa
+   * adanya dan tombol simpan mengambil berkas itu, bukan membuat PDF baru.
+   */
+  const cvFile = $derived.by(() => {
+    const value = String(profile.cv_url ?? '').trim()
+    return isUrl(value) || value.startsWith('/') ? value : ''
+  })
+
+  const hasCvFile = $derived(Boolean(cvFile))
+
+  const cvLabel = $derived.by(() => {
+    if (!cvFile) return ''
+    const clean = cvFile.split('#')[0].split('?')[0]
+    const raw = clean.split('/').filter(Boolean).pop() ?? ''
+    try {
+      /* Nama berkas bisa mengandung %20 dari unggahan; jangan sampai
+         decodeURIComponent yang gagal mematikan seluruh panel. */
+      return decodeURIComponent(raw) || 'cv.pdf'
+    } catch {
+      return raw || 'cv.pdf'
+    }
+  })
+
+  const downloadName = $derived.by(() => {
+    const owner = String(profile.name ?? '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]/g, '')
+    return `CV-${owner || 'wangsheng'}.pdf`
+  })
 
   const escape = (value) =>
     String(value ?? '')
@@ -81,7 +112,34 @@
 </body></html>`
   }
 
+  /**
+   * Tombol simpan selalu menuruti isi bagian ini: bila ada berkas PDF, berkas
+   * itulah yang diunduh (tanpa membuat dokumen tandingan yang bisa berbeda
+   * isinya dari yang ditampilkan). Tanpa berkas, halaman CV dicetak seperti
+   * sebelumnya.
+   */
   function printCv() {
+    if (cvFile) {
+      /*
+       * Atribut `download` hanya berlaku untuk berkas satu asal. Untuk tautan
+       * luar (mis. Drive) peramban akan menavigasi keluar dari museum, jadi
+       * jalur itu dibuka di tab baru dan pengguna menyimpannya dari sana.
+       */
+      if (!cvFile.startsWith('/')) {
+        window.open(cvFile, '_blank', 'noopener,noreferrer')
+        return
+      }
+
+      const link = document.createElement('a')
+      link.href = cvFile
+      link.download = downloadName
+      link.rel = 'noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      return
+    }
+
     const frame = document.createElement('iframe')
     frame.style.position = 'fixed'
     frame.style.right = '0'
@@ -111,16 +169,34 @@
     <div>
       <p class="kicker">Resume satu halaman</p>
       <h4>CV Digital</h4>
+      <p class="cv-note">
+        {#if hasCvFile}
+          Berkas CV yang dipasang admin ditampilkan apa adanya, dan tombol simpan mengambil berkas itu.
+        {:else}
+          Belum ada berkas PDF terpasang — halaman ini disusun otomatis dari data museum.
+        {/if}
+      </p>
     </div>
     <div class="cv-actions">
       {#if hasCvFile}
-        <a class="button" href={safeHref(profile.cv_url)} target="_blank" rel="noreferrer" download>Unduh CV (PDF)</a>
+        <a class="button" href={cvFile} target="_blank" rel="noreferrer">Buka di tab baru</a>
       {/if}
-      <button class="button primary" type="button" onclick={printCv}>Cetak / Simpan PDF</button>
+      <button class="button primary" type="button" onclick={printCv}>
+        {hasCvFile ? 'Unduh CV (PDF)' : 'Cetak / Simpan PDF'}
+      </button>
     </div>
   </div>
 
-  <article class="cv-sheet">
+  {#if hasCvFile}
+    <div class="cv-paper">
+      <iframe class="cv-pdf" src={`${cvFile}#view=FitH`} title={`CV ${profile.name ?? ''}`.trim()}></iframe>
+      <p class="cv-paper-foot">
+        <span class="cv-paper-name">{cvLabel}</span>
+        <a href={cvFile} target="_blank" rel="noreferrer">Buka di tab baru ↗</a>
+      </p>
+    </div>
+  {:else}
+    <article class="cv-sheet">
     <header class="cv-head">
       <div>
         <h3>{profile.name}</h3>
@@ -201,7 +277,8 @@
         <p class="cv-text">{profile.career_goal}</p>
       </section>
     {/if}
-  </article>
+    </article>
+  {/if}
 </div>
 
 <style>
@@ -217,6 +294,56 @@
     display: flex;
     flex-wrap: wrap;
     gap: 7px;
+  }
+
+  .cv-note {
+    margin-top: 5px;
+    max-width: 46ch;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--ink-muted);
+  }
+
+  /* Bingkai kertas untuk PDF: sama seperti lembar CV, tetapi isinya berkas. */
+  .cv-paper {
+    padding: 10px;
+    border: 1px solid rgba(36, 28, 22, 0.22);
+    background: rgba(255, 253, 247, 0.72);
+    box-shadow: inset 0 0 0 4px rgba(248, 238, 216, 0.5);
+  }
+
+  .cv-pdf {
+    display: block;
+    width: 100%;
+    height: 540px;
+    height: clamp(380px, 62dvh, 760px);
+    border: 1px solid rgba(36, 28, 22, 0.18);
+    background: var(--paper);
+  }
+
+  .cv-paper-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 2px 0;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+  }
+
+  .cv-paper-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cv-paper-foot a {
+    flex: 0 0 auto;
+    color: var(--vermilion-deep);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .cv-text {
@@ -263,6 +390,15 @@
 
     .cv-skill-cols {
       grid-template-columns: 1fr;
+    }
+
+    .cv-pdf {
+      height: 60dvh;
+      min-height: 320px;
+    }
+
+    .cv-paper-foot {
+      flex-wrap: wrap;
     }
   }
 </style>
