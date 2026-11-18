@@ -1,7 +1,7 @@
-# Panduan Agen AI (AGENTS.md) — Museum Portofolio Wangsheng
+# Panduan Agen AI (AGENTS.md) — Museum Portofolio NekoNeko
 
 Dokumen ini menjelaskan arsitektur, alur data, dan aturan modifikasi proyek
-**Museum Portofolio 3D — Wangsheng**. Konten museum tidak ditulis di kode: semuanya
+**Museum Portofolio 3D — NekoNeko**. Konten museum tidak ditulis di kode: semuanya
 dibaca dari database dan diatur lewat dashboard admin 2D.
 
 ---
@@ -201,7 +201,7 @@ diubah kembali menjadi array oleh `server/api/serialize.js`.
 
 Dibuat otomatis saat tabel `admin_users` masih kosong, memakai
 `ADMIN_NAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` dari `.env`. Bila tidak diisi, dipakai
-fallback `admin@wangsheng.local` / `admin12345` dan server mencetak peringatan.
+fallback `admin@nekoneko.local` / `admin12345` dan server mencetak peringatan.
 Ganti sebelum produksi.
 
 ---
@@ -686,7 +686,7 @@ langsung dipakai museum pada pemuatan berikutnya — tanpa mengubah kode.
 
 ### Catatan Pembangunan — Diorama Isometrik
 
-**Proyek:** Portofolio 3D / Halaman Wangsheng  
+**Proyek:** Portofolio 3D / Halaman NekoNeko  
 **Perubahan besar:** third-person → diorama isometrik 3/4, kontrol klik + WASD  
 **Tanggal:** 16 November 2026  
 **Status:** selesai, `bun run build` lolos, alur runtime utama sudah diuji
@@ -701,7 +701,7 @@ Awalnya proyek adalah portofolio third-person dengan kamera orbit, pointer lock,
 
 - **Diorama isometrik 3/4** dengan kamera perspektif bersudut tetap.
 - **Gerak klik-untuk-jalan** sebagai mode utama, **WASD** sebagai mode alternatif yang bisa diganti kapan saja.
-- **Halaman Wangsheng** bergaya tinta, kertas, batu, dan vermilion — bukan sci-fi neon.
+- **Halaman NekoNeko** bergaya tinta, kertas, batu, dan vermilion — bukan sci-fi neon.
 - **Roh kertas (shikigami)** sebagai NPC, menggantikan NPC hologram.
 - **Lentera proyek** dengan gulungan karya, menggantikan proyektor hologram.
 - **Animasi berlapis**: VMD sebagai dasar, pose prosedural di atasnya, dihitung sebelum fisika MMD.
@@ -769,7 +769,7 @@ Yang **tidak** diubah: model PMX karakter, file VMD `idle/walk/run`, dan seluruh
 
 #### 2.1 Referensi
 
-Tema **Wangsheng**: dunia kematian yang hangat dan handmade, bukan lab futuristik.
+Tema **NekoNeko**: dunia kematian yang hangat dan handmade, bukan lab futuristik.
 
 - Palet: batu hangat, kertas krem, tinta cokelat-hitam, vermilion, emas pudar, plum.
 - Material: batu bertekstur, kayu, kertas, tembaga, kain.
@@ -799,7 +799,7 @@ Tema **Wangsheng**: dunia kematian yang hangat dan handmade, bukan lab futuristi
 | **WASD tetap ada** | Sebagian pengguna lebih nyaman dengan tombol; mode bisa diganti tanpa reload. |
 | **VMD tetap dipakai** | Aset `idle/walk/run` sudah ada dan kualitasnya baik. Tidak perlu konversi Mixamo baru. |
 | **Pose prosedural, bukan additive clip** | Additive clip pada MMD rawan menggandakan rotasi dan bertabrakan dengan IK. Overlay quaternion lokal lebih terkontrol. |
-| **Roh kertas menggantikan NPC manusia/hologram** | Cocok dengan tema Wangsheng, lebih murah secara geometri, dan memberi siluet khas diorama. |
+| **Roh kertas menggantikan NPC manusia/hologram** | Cocok dengan tema NekoNeko, lebih murah secara geometri, dan memberi siluet khas diorama. |
 | **Lentera proyek menggantikan hologram** | Media “kertas gulung” konsisten dengan UI dan dunia; teks tetap terbaca karena gulungan diputar menghadap kamera. |
 | **Tidak menambah dependensi** | Semua tekstur, bentuk, dan suara dibuat prosedural. Build tetap ringan dan tidak ada aset eksternal baru. |
 | **Debug state diekspos di dev** | `window.__portfolioApp.getDebugState()` memudahkan pengujian otomatis tanpa mengotori UI. |
@@ -1034,7 +1034,7 @@ Urutan ini penting karena setiap lapisan bergantung pada lapisan sebelumnya.
 #### Langkah 1 — Kunci arah dan batasan
 
 - Tentukan tema, kamera, dan kontrol sebelum menyentuh kode.
-- Keputusan yang dipakai: Wangsheng, perspektif 3/4 tetap, klik + WASD, rombak total dunia/NPC/UI.
+- Keputusan yang dipakai: NekoNeko, perspektif 3/4 tetap, klik + WASD, rombak total dunia/NPC/UI.
 - Jangan menambah dependensi bila aset dan library yang ada sudah cukup.
 
 #### Langkah 2 — Konfigurasi
@@ -1388,7 +1388,7 @@ Gunakan blok ini jika ingin membangun ulang proyek dari nol:
 
 ```text
 Bangun portofolio 3D Svelte 5 + Three.js berbentuk diorama isometrik 3/4
-bertema Wangsheng (tinta, kertas, batu, vermilion). Model karakter PMX dan VMD
+bertema NekoNeko (tinta, kertas, batu, vermilion). Model karakter PMX dan VMD
 idle/walk/run sudah tersedia di public/; jangan tambah dependensi baru.
 
 Kamera: PerspectiveCamera fov 32, yaw π/4, pitch 0.58, jarak 16 (zoom 10–24),
@@ -1429,7 +1429,7 @@ mode WASD, Escape, dan tidak ada error console.
 
 ### 12. Ringkasan satu paragraf
 
-Proyek ini dibangun ulang dari third-person menjadi diorama isometrik dengan kamera 3/4 tetap, kontrol klik-untuk-jalan yang bisa diganti WASD, dan dunia Wangsheng yang seluruhnya dibuat dari primitif Three.js serta tekstur Canvas 2D. NPC menjadi roh kertas dengan AI terbatas, hologram menjadi lentera gulungan, dan UI menjadi sistem kertas/tinta yang konsisten. Animasi MMD diperbaiki dengan overlay pose sebelum fisika, sementara kontrol, kamera, dan UI ditulis ulang agar terasa seperti diorama yang bisa disentuh — bukan halaman 3D generik.
+Proyek ini dibangun ulang dari third-person menjadi diorama isometrik dengan kamera 3/4 tetap, kontrol klik-untuk-jalan yang bisa diganti WASD, dan dunia NekoNeko yang seluruhnya dibuat dari primitif Three.js serta tekstur Canvas 2D. NPC menjadi roh kertas dengan AI terbatas, hologram menjadi lentera gulungan, dan UI menjadi sistem kertas/tinta yang konsisten. Animasi MMD diperbaiki dengan overlay pose sebelum fisika, sementara kontrol, kamera, dan UI ditulis ulang agar terasa seperti diorama yang bisa disentuh — bukan halaman 3D generik.
 
 ---
 
@@ -2043,7 +2043,7 @@ juga terasa kosong di antara meja dan di tepi timur/selatan yang tak berdinding.
 #### 25.3 Perabot dan hiasan (`src/world/Props.js`)
 
 Modul baru berisi hiasan yang tidak bergantung pada database, semuanya mengikuti
-bahasa rupa Wangsheng (batu, kayu gelap, kuningan, kertas lentera, bunga plum):
+bahasa rupa NekoNeko (batu, kayu gelap, kuningan, kertas lentera, bunga plum):
 
 - sepasang **dudukan dupa** kuningan berkaki tiga dengan tiga batang hio membara
   di (±2,9; 7,4), mengapit jalan masuk plaza;
@@ -3145,7 +3145,7 @@ blok teks di kanan.
 | Meteran | **tinta merah naik dari bawah** (`height: persen`), ujung kuas 2 px `--vermilion-deep` |
 | Skala | 11 garis tipis `rgba(36,28,22,0.13)` sehingga tinggi tinta terbaca tanpa angka besar |
 | Tulisan | 往 / 生 / 堂 tegak di sisi kanan kertas, `--font-seal` |
-| Teks | eyebrow mono “Museum Wangsheng”, judul “Membuka pendopo”, satu kalimat isi, `Langkah: <label>`, dan persen mono kecil |
+| Teks | eyebrow mono “Museum”, judul “Membuka pendopo”, satu kalimat isi, `Langkah: <label>`, dan persen mono kecil |
 
 Tidak ada lagi footer teknologi, tidak ada glow tanpa sumber (cahaya bawah sekarang
 `rgba(255,168,92,0.1)` dari satu titik, meniru lentera di luar layar).
@@ -4078,13 +4078,13 @@ dan data contoh.
 
 | Berkas | Sebelum | Sekarang |
 | --- | --- | --- |
-| `package.json`, `bun.lock` | nama paket memakai nama karakter lama | `museum-wangsheng` |
+| `package.json`, `bun.lock` | nama paket memakai nama karakter lama | `museum-nekoneko` |
 | `src/config.js` | jalur aset menunjuk folder model karakter lama | `model: '/models/karakter/karakter.pmx'` + komentar bahwa folder itu tidak ikut repo |
 | `src/character/Character.js` | `mesh.name` memakai nama karakter lama | `mesh.name = 'character'`, pesan galat generik |
 | `src/app/PortfolioApp.js` | label cadangan memakai nama karakter lama | `'karakter bawaan'` |
 | `src/admin/ModelUploader.svelte` | contoh jalur & placeholder memakai nama lama | contoh generik (`model/tex/face.png`) |
 | `shared/content-schema.js` | contoh jalur unggahan memakai nama karakter lama | contoh `/uploads/models/contoh-…` |
-| `index.html` | judul halaman memakai nama karakter lama | `<title>Museum Portofolio · Halaman Wangsheng</title>` |
+| `index.html` | judul halaman memakai nama karakter lama | `<title>Museum Portofolio · Halaman NekoNeko</title>` |
 | `server/db/seed-data.js` | profil contoh memakai nama karakter lama | `Nama Kamu` (placeholder, seperti `kamu@email.com`) |
 | `src/ui/*`, `src/content/portfolio.js`, dokumentasi | kalimat “<nama lama> berjalan …” | “karakter berjalan …” |
 | `.gitignore` | `public/models/` tanpa keterangan | ditambah komentar: model tidak diunggah karena besar + berhak cipta |

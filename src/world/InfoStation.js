@@ -86,7 +86,7 @@ export class InfoStation {
       subtitle: this.section.description,
       seal: this.section.seal,
       accent: this.accent,
-      eyebrow: 'WANGSHENG MUSEUM',
+      eyebrow: 'NEKONEKO MUSEUM',
     })
     this.textures.push(texture)
 

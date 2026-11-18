@@ -1,6 +1,6 @@
 # Tutorial: Produksi dengan Caddy
 
-Panduan ini memasang **Museum Portofolio Wangsheng** di server sungguhan dengan
+Panduan ini memasang **Museum Portofolio NekoNeko** di server sungguhan dengan
 **Caddy sebagai satu-satunya web server**: Caddy yang memegang sertifikat HTTPS,
 menyajikan bundel statis `dist/`, dan meneruskan `/api` + `/uploads` ke proses Bun.
 Tidak ada nginx, tidak ada Apache, tidak ada PM2, dan **Vite tidak dipakai di
@@ -221,7 +221,7 @@ chmod 600 /srv/museum/.env
 
 `ADMIN_*` hanya dipakai **sekali**, saat tabel `admin_users` masih kosong —
 akun dibuat otomatis pada permulaan pertama. Bila `.env` dikosongkan, server
-memakai `admin@wangsheng.local` / `admin12345` dan mencetak peringatan; jangan
+memakai `admin@nekoneko.local` / `admin12345` dan mencetak peringatan; jangan
 biarkan itu terjadi di server publik.
 
 ### 4.3 Siapkan database
@@ -254,7 +254,7 @@ Bila keluar JSON, API siap.
 ```ini
 # /etc/systemd/system/museum-api.service
 [Unit]
-Description=Museum Wangsheng — API Bun
+Description=Museum — API Bun
 After=network.target
 
 [Service]

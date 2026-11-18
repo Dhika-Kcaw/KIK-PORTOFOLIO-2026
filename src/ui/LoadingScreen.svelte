@@ -67,7 +67,7 @@
       </figure>
 
       <div class="caption">
-        <p class="eyebrow">Museum Wangsheng</p>
+        <p class="eyebrow">Museum</p>
         <h1>Membuka pendopo</h1>
         <p class="note">Lentera dinyalakan, meja ditata, roh kertas dibangunkan.</p>
 

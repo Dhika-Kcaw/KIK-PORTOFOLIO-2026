@@ -8,7 +8,7 @@ const Root = isAdmin
   ? (await import('./admin/AdminApp.svelte')).default
   : (await import('./App.svelte')).default
 
-if (isAdmin) document.title = 'Arsip Wangsheng · Dashboard'
+if (isAdmin) document.title = 'Arsip NekoNeko · Dashboard'
 
 const app = mount(Root, {
   target: document.getElementById('app'),

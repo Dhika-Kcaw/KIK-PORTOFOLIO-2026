@@ -866,7 +866,7 @@
       <a class="brand" href="/">
         <span class="brand-seal" aria-hidden="true">往</span>
         <span class="brand-copy">
-          <strong>Wangsheng</strong>
+          <strong>NekoNeko</strong>
           <small>Archive Control</small>
         </span>
       </a>
@@ -946,7 +946,7 @@
             <div class="view-intro">
               <div>
                 <p class="eyebrow">Ringkasan arsip · {todayLabel}</p>
-                <h2>Museum Wangsheng</h2>
+                <h2>Museum</h2>
                 <p class="muted">{countsSummary}</p>
               </div>
               <a class="button primary" href="/" target="_blank" rel="noreferrer">

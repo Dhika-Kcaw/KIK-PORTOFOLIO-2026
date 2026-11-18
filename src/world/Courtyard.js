@@ -19,7 +19,7 @@ import {
 } from './canvasTextures.js'
 
 /**
- * Halaman Wangsheng: diorama batu tempat portofolio berlangsung.
+ * Halaman NekoNeko: diorama batu tempat portofolio berlangsung.
  * Tidak ada grid neon atau penanda debug — hanya lempeng batu, lumut,
  * lentera batu, pohon plum, dupa, dan untaian lentera kertas.
  */

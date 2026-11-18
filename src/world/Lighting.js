@@ -1,7 +1,7 @@
 import { DirectionalLight, Group, HemisphereLight, PointLight } from 'three'
 
 /**
- * Cahaya senja halaman Wangsheng:
+ * Cahaya senja halaman NekoNeko:
  * matahari rendah berwarna jingga, langit kertas hangat, dan pantulan lentera.
  */
 export class Lighting {

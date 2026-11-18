@@ -3,7 +3,7 @@ import { HttpError, isSecureRequest, parseCookies, serializeCookie } from './htt
 
 export const SESSION_COOKIE = 'wg_admin'
 const SESSION_DAYS = 7
-const FALLBACK_EMAIL = 'admin@wangsheng.local'
+const FALLBACK_EMAIL = 'admin@nekoneko.local'
 const FALLBACK_PASSWORD = 'admin12345'
 
 const createToken = () => randomBytes(32).toString('hex')

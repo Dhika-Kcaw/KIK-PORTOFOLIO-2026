@@ -21,7 +21,7 @@ import {
  *
  * Aturan bentuk: isi tengah ≤ 1,2 m supaya papan label di y 1,5 tetap terbaca,
  * elemen tinggi diletakkan di samping, dan setiap benda mengikuti kosakata rupa
- * Wangsheng (batu, kayu gelap, bambu, kuningan, kertas, tinta, vermilion).
+ * NekoNeko (batu, kayu gelap, bambu, kuningan, kertas, tinta, vermilion).
  */
 
 /** Palet material bersama; didaftarkan agar ikut dibuang saat dispose(). */

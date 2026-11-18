@@ -103,7 +103,7 @@ export function createGlowTexture(
 }
 
 /* ------------------------------------------------------------------ */
-/*  HALAMAN WANGSHENG                                                  */
+/*  HALAMAN NEKONEKO                                                  */
 /* ------------------------------------------------------------------ */
 
 /** Batu halaman: lempeng batu hangat, lumut, retak tinta, dan kelopak plum. */
@@ -314,7 +314,7 @@ export function createProjectScrollTexture(project = {}) {
   context.fillStyle = INK_SOFT
   context.font = '500 17px "JetBrains Mono", ui-monospace, monospace'
   context.textBaseline = 'alphabetic'
-  context.fillText('WANGSHENG  ·  ARSIP KARYA', 76, 102)
+  context.fillText('NEKONEKO  ·  ARSIP KARYA', 76, 102)
 
   // Cap tahun.
   context.save()
@@ -731,7 +731,7 @@ export function createPetalTexture() {
 }
 
 /** Papan nama bagian museum: kertas arsip dengan segel dan judul besar. */
-export function createSectionPlaqueTexture({ title, subtitle, seal = '往', accent = VERMILION, eyebrow = 'WANGSHENG MUSEUM' }) {
+export function createSectionPlaqueTexture({ title, subtitle, seal = '往', accent = VERMILION, eyebrow = 'NEKONEKO MUSEUM' }) {
   const width = 768
   const height = 520
   const canvas = createCanvas(width, height)
@@ -921,7 +921,7 @@ export function createCertificateTexture(certificate = {}) {
 
   context.fillStyle = INK_SOFT
   context.font = '500 14px "JetBrains Mono", ui-monospace, monospace'
-  context.fillText('WANGSHENG · ARSIP PENCAPAIAN', width / 2, 164)
+  context.fillText('NEKONEKO · ARSIP PENCAPAIAN', width / 2, 164)
 
   const title = certificate.title || 'Sertifikat'
   const titleSize = fitFont(
@@ -1279,7 +1279,7 @@ export function createBoardTagTexture(accent = VERMILION) {
  * Muka kartu untuk meja judi 3D.
  *
  * Kartu hanya selebar ±10 cm dan dilihat dari jarak duduk, jadi 220×300 px
- * sudah tajam. Merah memakai vermilion Wangsheng, bukan merah kartu remi biasa.
+ * sudah tajam. Merah memakai vermilion NekoNeko, bukan merah kartu remi biasa.
  */
 export function createCardFaceTexture({ rank = 'A', suit = '♠', red = false } = {}) {
   const width = 220

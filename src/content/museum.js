@@ -1,5 +1,5 @@
 /**
- * Tata letak Museum Wangsheng.
+ * Tata letak Museum.
  *
  * Denahnya cincin galeri: lantai plaza (pohon plum) di tengah, lalu
  * - 3 meja di sisi selatan menghadap pintu masuk — Beranda tepat di tengah

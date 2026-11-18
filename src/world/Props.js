@@ -20,7 +20,7 @@ import { createPaperLanternTexture } from './canvasTextures.js'
  * Perabot dan hiasan museum: bukan koleksi dari database, hanya pengisi ruang
  * supaya plaza tidak terasa kosong.
  *
- * Semuanya mengikuti bahasa rupa Wangsheng: batu, kayu gelap, kuningan, kertas
+ * Semuanya mengikuti bahasa rupa NekoNeko: batu, kayu gelap, kuningan, kertas
  * lentera, dan bunga plum. Semua prop tanah menambahkan collider sendiri, dan
  * World memasukkannya ke NavGrid sebelum grid dibangun.
  */

@@ -8,7 +8,7 @@ import { PetalField } from './Particles.js'
 import { Props } from './Props.js'
 
 /**
- * Dunia museum Wangsheng.
+ * Dunia museum.
  * Bangunan dan dekorasi statis ada di Museum, perabot dan hiasan pengisi ruang
  * ada di Props, sedangkan koleksi yang bergantung pada database ada di Exhibits.
  */

@@ -19,7 +19,7 @@
  */
 
 export const profile = {
-  name: 'Wangsheng',
+  name: 'NekoNeko',
   role: 'Creative Developer',
   tagline: 'Diorama portofolio isometrik',
   location: 'Indonesia',
@@ -50,7 +50,7 @@ export const halls = [
     dialog: [
       {
         speaker: 'Mira',
-        text: 'Selamat datang di halaman Wangsheng. Aku Mira, roh kertas yang menjaga pendopo ini.',
+        text: 'Selamat datang di halaman NekoNeko. Aku Mira, roh kertas yang menjaga pendopo ini.',
       },
       {
         speaker: 'Mira',
@@ -242,7 +242,7 @@ export const artworks = [
       description:
         'Portofolio interaktif berbasis Svelte 5 dan Three.js, kini berbentuk diorama isometrik yang bisa dijelajahi dengan klik.',
       story:
-        'Lentera tengah ini adalah halaman yang sedang kamu buka. Diorama halaman Wangsheng dengan karakter yang bisa dijelajahi, roh kertas, lentera proyek, dialog bergaya permainan klasik, dan pratinjau web langsung.',
+        'Lentera tengah ini adalah halaman yang sedang kamu buka. Diorama halaman NekoNeko dengan karakter yang bisa dijelajahi, roh kertas, lentera proyek, dialog bergaya permainan klasik, dan pratinjau web langsung.',
       role:
         'Peran: desain pengalaman, arsitektur frontend, integrasi Three.js, animasi karakter, AI jelajah NPC, dan sistem dialog.',
       tags: ['Svelte 5', 'Three.js', 'WebGL', 'MMD', 'Live Embed'],

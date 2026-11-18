@@ -22,7 +22,7 @@
   <header class="identity">
     <div class="seal" aria-hidden="true">往</div>
     <div class="identity-copy">
-      <p class="eyebrow">Museum Wangsheng</p>
+      <p class="eyebrow">Museum</p>
       <h1>{profile.name}</h1>
       <p class="role">
         {profile.headline || profile.role}<span class="dot">·</span>{profile.class_name || profile.competence}

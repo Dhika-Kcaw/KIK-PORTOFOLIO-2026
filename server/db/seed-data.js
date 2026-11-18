@@ -65,7 +65,7 @@ export const seedProjects = [
     category: 'Web Interaktif',
     summary: 'Museum portofolio isometrik yang menampilkan karya, sertifikat, dan testimoni sebagai pengalaman yang bisa dijelajahi.',
     description:
-      'Portofolio interaktif berbasis Svelte 5 dan Three.js. Pengunjung berjalan di museum Wangsheng, membaca gulungan karya, dan membuka detail proyek tanpa meninggalkan halaman.',
+      'Portofolio interaktif berbasis Svelte 5 dan Three.js. Pengunjung berjalan di museum, membaca gulungan karya, dan membuka detail proyek tanpa meninggalkan halaman.',
     problem:
       'Portofolio berbentuk daftar membuat pengunjung cepat bosan dan sulit memahami konteks setiap karya. Informasi penting seperti peran, masalah, dan dokumentasi proses sering terpisah.',
     goal:

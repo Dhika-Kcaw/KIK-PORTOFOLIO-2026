@@ -46,7 +46,7 @@
       .trim()
       .replace(/\s+/g, '-')
       .replace(/[^\w-]/g, '')
-    return `CV-${owner || 'wangsheng'}.pdf`
+    return `CV-${owner || 'NekoNeko'}.pdf`
   })
 
   const escape = (value) =>

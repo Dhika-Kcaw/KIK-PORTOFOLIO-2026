@@ -66,7 +66,7 @@
         <span class="seal" aria-hidden="true">引</span>
         <div>
           <p class="eyebrow">Indeks koleksi</p>
-          <h2 id="index-title">Museum Wangsheng</h2>
+          <h2 id="index-title">Museum</h2>
           <p class="sub">
             {data?.profile?.name ?? 'Portofolio'} · pilih tujuan, karakter akan berjalan ke sana
           </p>

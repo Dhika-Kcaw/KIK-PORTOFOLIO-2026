@@ -42,7 +42,7 @@
     <header class="head">
       <span class="seal" aria-hidden="true">往</span>
       <div>
-        <p class="eyebrow">Wangsheng Archive</p>
+        <p class="eyebrow">NekoNeko Archive</p>
         <h1>Masuk ke meja arsip</h1>
       </div>
     </header>
@@ -63,7 +63,7 @@
           autocomplete="username"
           autocapitalize="none"
           spellcheck="false"
-          placeholder="admin@wangsheng.local"
+          placeholder="admin@nekoneko.local"
           required
         />
       </label>

@@ -24,7 +24,7 @@ import {
 import { GROUND_LAYER } from './groundLayers.js'
 
 /**
- * Museum Wangsheng: paviliun terbuka bergaya arsip.
+ * Museum: paviliun terbuka bergaya arsip.
  *
  * Dua dinding nyata (utara & barat) menjadi tempat koleksi. Sisi timur dan
  * selatan dibiarkan terbuka agar kamera isometrik tetap melihat ke dalam.

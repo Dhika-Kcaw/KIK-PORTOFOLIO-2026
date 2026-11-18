@@ -68,7 +68,7 @@
       <div class="title-wrap">
         <span class="seal" aria-hidden="true">{section.seal}</span>
         <div class="title-copy">
-          <p class="eyebrow">{section.eyebrow || 'Museum Wangsheng'}</p>
+          <p class="eyebrow">{section.eyebrow || 'Museum'}</p>
           <h2 id="panel-title">{project ? project.title : section.label}</h2>
           <p class="sub">
             {#if project}
@@ -147,7 +147,7 @@
     </div>
 
     <footer class="panel-foot">
-      <p>{profile.name ?? 'Portofolio'} · arsip Wangsheng</p>
+      <p>{profile.name ?? 'Portofolio'} · arsip NekoNeko</p>
       <button class="foot-btn" type="button" onclick={close}>Tutup panel</button>
     </footer>
   </div>

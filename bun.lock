@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "museum-wangsheng",
+      "name": "museum-nekoneko",
       "dependencies": {
         "@moeru/three-mmd": "^0.2.0-beta.2",
         "@moeru/three-mmd-physics-ammo": "0.2.0-beta.2",
