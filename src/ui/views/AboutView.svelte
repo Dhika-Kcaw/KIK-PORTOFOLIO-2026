@@ -90,8 +90,7 @@
   </div>
 
   <section class="panel-section goal-box">
-    <p class="kicker">Cita-cita & tujuan karier</p>
-    <h4>Ke arah mana arsip ini dibangun</h4>
+    <h4 class="kicker">Cita-cita & tujuan karier</h4>
     <p>{profile.career_goal}</p>
   </section>
 </div>
