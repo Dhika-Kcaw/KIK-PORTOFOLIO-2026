@@ -22,7 +22,7 @@
       title: 'Museum',
       items: [
         { key: 'E / Klik', desc: 'Buka proyek, meja info, atau testimoni' },
-        { key: 'I', desc: 'Buka indeks seluruh bagian museum' },
+        { key: 'I', desc: 'Peta hidup: lokasi karakter dan seluruh koleksi' },
         { key: 'G', desc: 'Melambai' },
         { key: 'V', desc: 'Bersorak' },
         { key: 'P', desc: 'Fisika rambut dan kain' },
@@ -47,7 +47,7 @@
       title: 'Museum',
       items: [
         { key: 'Ketuk objek', desc: 'Buka meja info, bingkai proyek, atau testimoni' },
-        { key: 'Indeks', desc: 'Daftar seluruh bagian; pilih untuk diantar' },
+        { key: 'Peta', desc: 'Denah museum yang bergerak mengikuti dunia' },
         { key: 'Suara', desc: 'Nyalakan atau matikan audio' },
         { key: 'Fisika', desc: 'Rambut dan kain' },
         { key: '×', desc: 'Tutup panel lewat tombol silang di kanan atas' },
@@ -92,12 +92,12 @@
     <p class="lede">
       {#if touch}
         Museum ini dibaca seperti diorama. Ketuk lantai untuk berjalan, ketuk meja
-        untuk membuka bagiannya. Indeks menampilkan lokasi setiap tujuan; pilih satu
-        dan karakter akan berjalan ke sana.
+        untuk membuka bagiannya. Peta menampilkan posisi karakter dan setiap tujuan;
+        pilih satu dan karakter akan berjalan ke sana.
       {:else}
         Museum ini dibaca seperti diorama. Bagian portofolio hanya terbuka setelah karakter
-        mendatangi mejanya. Indeks menampilkan lokasi setiap tujuan; pilih satu dan ia akan
-        berjalan ke sana.
+        mendatangi mejanya. Peta menggambar denah yang sama dengan dunia 3D; pilih satu
+        tujuan dan karakter akan berjalan ke sana.
       {/if}
     </p>
 

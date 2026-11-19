@@ -82,6 +82,8 @@ export class PortfolioApp {
     this.clickPoint = new Vector3()
     this.dialogFocus = new Vector3()
     this.groundPlane = new Plane(new Vector3(0, 1, 0), 0)
+    // Vektor kerja untuk peta 2D (arah pandang kamera), dipakai ulang tiap potret.
+    this.mapViewVector = new Vector3()
 
     this.handleKeyDown = this.handleKeyDown.bind(this)
     this.unlockAudio = this.unlockAudio.bind(this)
@@ -444,6 +446,16 @@ export class PortfolioApp {
       return
     }
 
+    // Tombol yang sedang fokus (mis. penanda di peta museum) menangani
+    // Space/Enter sendiri; karakter tidak boleh ikut melompat di belakangnya.
+    if (
+      target instanceof HTMLElement &&
+      target.tagName === 'BUTTON' &&
+      (event.code === 'Space' || event.code === 'Enter')
+    ) {
+      return
+    }
+
     if (event.code === 'Tab') {
       if (this.paused || this.helpVisible) return
       event.preventDefault()
@@ -460,6 +472,11 @@ export class PortfolioApp {
       return
     }
 
+    if (event.code === 'KeyI') {
+      // Peta museum: bisa dibuka dan ditutup dari papan tombol.
+      this.callbacks.onToggleMap?.()
+      return
+    }
     if (event.code === 'KeyR') {
       this.resetCamera()
       return
@@ -507,6 +524,254 @@ export class PortfolioApp {
       CONFIG.world.interactDistance,
     )
     return nearest?.id ?? null
+  }
+
+  /**
+   * Label, cap, dan tujuan navigasi satu koleksi — dipakai peta 2D.
+   * Semuanya dibaca dari objek dunia, jadi peta tidak punya daftar sendiri yang
+   * bisa tertinggal saat proyek/pengunjung bertambah.
+   */
+  mapStationInfo(item) {
+    if (!item) return null
+    if (item.kind === 'project') {
+      return {
+        label: item.project?.title ?? 'Proyek',
+        seal: '作',
+        accent: '#a98bb8',
+        view: { type: 'project', id: item.project?.id },
+      }
+    }
+    if (item.kind === 'visitor') {
+      const name = String(item.testimonial?.name ?? 'Pengunjung').trim()
+      return {
+        label: name || 'Pengunjung',
+        seal: name.slice(0, 1) || '客',
+        accent: item.accent ?? '#c07a86',
+        view: { type: 'testimonial', id: item.testimonial?.id },
+      }
+    }
+    if (item.kind === 'board') {
+      return {
+        label: item.section?.label ?? 'Papan Pengunjung',
+        seal: item.section?.seal ?? '簽',
+        accent: item.section?.accent ?? '#c07a86',
+        view: { type: 'board' },
+      }
+    }
+    if (item.kind === 'game') {
+      return {
+        label: item.section?.label ?? 'Kedai Kartu',
+        seal: item.section?.seal ?? '牌',
+        accent: item.section?.accent ?? '#b23a30',
+        view: { type: 'game' },
+      }
+    }
+    return {
+      label: item.section?.label ?? item.id,
+      seal: item.section?.seal ?? '往',
+      accent: item.section?.accent ?? '#b23a30',
+      view: { type: 'section', key: item.sectionKey },
+    }
+  }
+
+  /**
+   * Titik gambar satu koleksi di peta.
+   *
+   * Bingkai proyek baris atas (`hung`) berbagi tapak dengan bingkai di bawahnya —
+   * di dunia 3D bedanya hanya ketinggian, jadi kalau peta memakai `anchor` apa
+   * adanya dua penanda akan menumpuk tepat dan hanya satu yang terlihat. Baris
+   * atas digeser ke arah ruangan mengikuti titik berdiri untuk membacanya,
+   * sehingga kedua baris tetap tampil dan bisa dipilih.
+   */
+  mapPinPosition(item, anchor) {
+    const rank = item.rank ?? 0
+    if (item.kind !== 'project' || rank <= 0) return { x: anchor.x, z: anchor.z }
+    const dx = (item.interaction?.x ?? anchor.x) - anchor.x
+    const dz = (item.interaction?.z ?? anchor.z) - anchor.z
+    const length = Math.hypot(dx, dz)
+    if (!length) return { x: anchor.x, z: anchor.z }
+    // 1,55 m = selisih titik berdiri antar-baris di museum 3D, jadi penanda
+    // baris atas jatuh tepat di tempat pemain memang harus berdiri.
+    const step = rank * 1.55
+    return { x: anchor.x + (dx / length) * step, z: anchor.z + (dz / length) * step }
+  }
+
+  /**
+   * Arah pandang kamera di bidang lantai, dibaca dari kamera yang benar-benar
+   * merender layar.
+   *
+   * Peta lama menebak arah ini dari `rig.yaw` dengan rumus `-sin/-cos`. Nilai
+   * `yaw` adalah sudut *posisi* kamera mengelilingi fokus, bukan arah pandang,
+   * dan kamera bisa berhenti di tengah animasi rotasi (yaw belum mencapai
+   * target), berada di mode duduk, atau tertahan `bounds`. Satu salah tanda
+   * membuat kerucut pandang di peta menghadap ke arah lain daripada layar.
+   * Mengambil vektor pandang langsung dari matriks kamera menutup semua celah
+   * itu: apa pun yang terjadi pada kamera, peta tahu persis ke mana ia menoleh.
+   * Arah yang **digambar** peta adalah kebalikan dari nilai ini — lihat
+   * `cameraPovVector()`.
+   */
+  cameraViewVector() {
+    const fallbackYaw = this.rig?.yaw ?? 0
+    const fallback = { x: -Math.sin(fallbackYaw), z: -Math.cos(fallbackYaw) }
+    const camera = this.engine?.camera
+    if (!camera?.getWorldDirection) return fallback
+
+    if (!this.mapViewVector) this.mapViewVector = new Vector3()
+    camera.getWorldDirection(this.mapViewVector)
+
+    const length = Math.hypot(this.mapViewVector.x, this.mapViewVector.z)
+    // Kamera yang menunjuk lurus ke bawah tidak punya arah datar yang berarti.
+    if (!Number.isFinite(length) || length < 1e-4) return fallback
+    return { x: this.mapViewVector.x / length, z: this.mapViewVector.z / length }
+  }
+
+  /**
+   * Arah yang digambar peta untuk kerucut pandang.
+   *
+   * Nilainya kebalikan dari `cameraViewVector()`: vektor pandang kamera menunjuk
+   * dari kamera menuju fokus, jadi di denah ia menunjuk ke sisi belakang karakter
+   * (menjauhi pemain). Di diorama, sisi yang terbaca sebagai “depan” adalah sisi
+   * yang menghadap kamera — tempat karakter berdiri menghadap layar. Pembalikan
+   * tanda dikerjakan **sekali** di sini, bukan di dua komponen gambar, supaya peta
+   * besar dan peta kecil tidak mungkin berbeda arah.
+   */
+  cameraPovVector() {
+    const view = this.cameraViewVector()
+    return { x: -view.x, z: -view.z }
+  }
+
+  /**
+   * Jangkauan pandang kamera di lantai, dalam meter.
+   *
+   * Setengah tinggi layar yang jatuh di lantai = jarak kamera × tan(fov/2),
+   * dibagi sin(pitch) karena kamera melihat lantai secara miring. Karena itu
+   * nilainya ikut berubah saat roda mouse memperbesar/memperkecil diorama:
+   * kerucut pandang di peta memendek ketika kamera didekatkan, dan memanjang
+   * ketika kamera ditarik mundur.
+   */
+  cameraPovReach() {
+    const camera = this.engine?.camera
+    const distance = this.rig?.distance ?? CONFIG.camera.distance
+    const pitch = this.rig?.pitch ?? CONFIG.camera.pitch
+    const vertical = ((camera?.fov ?? CONFIG.camera.fov) * Math.PI) / 360
+    const ground = (distance * Math.tan(vertical)) / Math.max(0.2, Math.sin(pitch))
+    return Math.min(15, Math.max(3.5, ground))
+  }
+
+  /**
+   * Setengah sudut pandang horizontal kamera (radian), dipakai peta untuk
+   * menggambar kerucut pandang selebar layar yang sesungguhnya — bukan angka
+   * hiasan. FOV vertikal dan rasio aspek sudah cukup untuk menentukannya.
+   */
+  cameraHalfAngle() {
+    const camera = this.engine?.camera
+    if (!camera) return 0.46
+    const vertical = ((camera.fov ?? 32) * Math.PI) / 360
+    const horizontal = Math.atan(Math.tan(vertical) * (camera.aspect || 1))
+    return Math.min(0.95, Math.max(0.28, horizontal))
+  }
+
+  /**
+   * Bentuk tapak satu koleksi di peta.
+   *
+   * Peta tidak menggambar semua koleksi sebagai titik: meja, bingkai, papan,
+   * dan meja judi punya tapak nyata di dunia, jadi denahnya terbaca sebagai
+   * ruangan — bukan sekumpulan titik. Ukuran diambil dari benda aslinya.
+   */
+  mapFootprint(item) {
+    if (item.kind === 'project') return { shape: 'rect', w: item.width ?? 3.4, d: 0.72 }
+    if (item.kind === 'board') return { shape: 'rect', w: item.config?.width ?? 2.2, d: 0.52 }
+    if (item.kind === 'game') return { shape: 'circle', r: item.collider?.radius ?? 1 }
+    if (item.kind === 'visitor') return { shape: 'person' }
+    return { shape: 'rect', w: 1.62, d: 1.08 }
+  }
+
+  /**
+   * Potret dunia untuk peta 2D.
+   *
+   * Peta membaca keadaan yang sama dengan museum 3D: daftar koleksi diambil
+   * dari `world.exhibits.items`, posisi pengunjung dari `anchor` yang diperbarui
+   * tiap frame, posisi karakter dari controller, dan arah pandang langsung dari
+   * kamera yang merender (`cameraViewVector()`).
+   * Karena itu tidak ada salinan denah yang bisa basi: menambah proyek,
+   * menyetujui testimoni, atau memindahkan meja langsung ikut tergambar.
+   * Metode ini dipanggil berulang selama peta terbuka (bukan sekali saat buka).
+   */
+  getMapState() {
+    if (!this.ready || this.destroyed || !this.world || !this.controller) return null
+
+    const museum = this.world.museum
+    const worldConfig = this.world.config?.world ?? CONFIG.world
+    const half = museum?.half ?? worldConfig.platformHalf ?? 18
+    const stations = []
+
+    for (const item of this.world.exhibits?.items ?? []) {
+      const anchor = item.anchor ?? item.interaction ?? item.position
+      if (!anchor) continue
+      const info = this.mapStationInfo(item)
+      if (!info?.view) continue
+      const pin = this.mapPinPosition(item, anchor)
+      const footprint = this.mapFootprint(item)
+      stations.push({
+        id: item.id,
+        kind: item.kind,
+        x: pin.x,
+        z: pin.z,
+        // Tapak perabot digambar dari pusat benda, bukan dari titik penanda:
+        // bingkai baris atas memakai tapak yang sama dengan bingkai bawahnya.
+        ax: anchor.x,
+        az: anchor.z,
+        rotation: item.group?.rotation?.y ?? 0,
+        shape: footprint.shape,
+        footprint,
+        // Baris bingkai proyek (0 = bawah, 1 = atas) dipakai peta untuk
+        // membedakan dua bingkai yang bertumpuk di satu kolom.
+        rank: item.rank ?? 0,
+        label: info.label,
+        seal: info.seal,
+        accent: info.accent,
+        view: info.view,
+        radius: item.interactRadius ?? CONFIG.world.interactDistance,
+        active: item.id === this.nearestId,
+        pending: item.id === this.pendingStationId,
+      })
+    }
+
+    const destination = this.pendingStationId
+      ? this.world.getStation(this.pendingStationId)?.interaction ?? null
+      : null
+    const marker = this.world.marker
+
+    return {
+      half,
+      walls: { z: museum?.wallZ ?? null, x: museum?.wallX ?? null },
+      plaza: { radius: museum?.plazaRadius ?? 5.2 },
+      player: {
+        x: this.controller.position.x,
+        z: this.controller.position.z,
+        heading: this.controller.heading,
+        walking: this.controller.isWalkingToPoint,
+        speed: this.controller.speed,
+      },
+      camera: {
+        yaw: this.rig?.yaw ?? 0,
+        // Arah pandang kamera yang sebenarnya (untuk rujukan), arah yang digambar
+        // peta (`pov`), lebar pandang, dan jangkauannya di lantai. Semuanya
+        // diturunkan dari kamera yang merender, jadi kerucut pandang di peta
+        // tidak pernah menyimpang dari layar 3D.
+        view: this.cameraViewVector(),
+        pov: this.cameraPovVector(),
+        halfAngle: this.cameraHalfAngle(),
+        reach: this.cameraPovReach(),
+        distance: this.rig?.distance ?? CONFIG.camera.distance,
+      },
+      destination: destination ? { x: destination.x, z: destination.z } : null,
+      marker:
+        marker?.group?.visible
+          ? { x: marker.group.position.x, z: marker.group.position.z }
+          : null,
+      stations,
+    }
   }
 
   /** Buka stasiun fisik: proyek, visitor, atau meja bagian. */
@@ -668,7 +933,7 @@ export class PortfolioApp {
     this.callbacks.onTestimonial?.(testimonial)
   }
 
-  /** Dibuka dari HUD/indeks atau dari stasiun 3D. */
+  /** Dibuka dari peta museum atau dari stasiun 3D. */
   openView(view, station = null) {
     if (!this.ready || this.destroyed || this.paused) return
     const targetStation = station ?? this.world?.getStation(this.stationIdForView(view)) ?? null
@@ -789,6 +1054,19 @@ export class PortfolioApp {
 
   resetCamera() {
     this.rig?.reset()
+  }
+
+  /**
+   * Putar diorama dari dalam peta.
+   *
+   * Selama peta terbuka, kanvas museum tertutup lembar peta, jadi seret kanan
+   * tidak bisa dipakai. Tanpa pintu masuk ini arah pandang terkunci dan kerucut
+   * pandang di peta terlihat “tidak mengikuti”.
+   */
+  rotateCamera(direction = 1) {
+    if (!this.ready || this.destroyed || this.seated || this.paused) return
+    this.rig?.rotateStep(direction)
+    this.sound.playUi()
   }
 
   startAudio() {

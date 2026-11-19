@@ -10,7 +10,7 @@
     onToggleMode,
     onTogglePhysics,
     onToggleMute,
-    onOpenIndex,
+    onOpenMap,
     onToggleHelp,
   } = $props()
 </script>
@@ -34,11 +34,11 @@
     <button
       class="system-btn index-btn"
       type="button"
-      onclick={onOpenIndex}
-      title="Indeks museum (I)"
+      onclick={onOpenMap}
+      title="Peta museum (I)"
     >
       <span class="key" aria-hidden="true">I</span>
-      <span class="label">Indeks</span>
+      <span class="label">Peta</span>
     </button>
 
     <button
@@ -114,7 +114,7 @@
         </p>
       {/if}
       <p class="hint subtle">
-        E interaksi<span class="sep">·</span>I indeks<span class="sep">·</span>Space lompat<span class="sep">·</span>Seret kanan putar<span class="sep">·</span>Tab ganti mode
+        E interaksi<span class="sep">·</span>I peta<span class="sep">·</span>Space lompat<span class="sep">·</span>Seret kanan putar<span class="sep">·</span>Tab ganti mode
       </p>
     {/if}
   </div>
@@ -462,8 +462,10 @@
   }
 
   .hud.touch .dock {
-    left: 14px;
-    right: 14px;
+    left: calc(14px + env(safe-area-inset-left, 0px));
+    /* Sisa ruang di kanan disediakan untuk peta kecil (96 px + tepi 12 px +
+       14 px jarak), jadi petunjuk gestur membungkus di sebelah kirinya. */
+    right: calc(122px + env(safe-area-inset-right, 0px));
     bottom: calc(82px + env(safe-area-inset-bottom, 0px));
     pointer-events: none;
   }
@@ -510,9 +512,26 @@
   }
 
   .hud.touch .prompt-card {
-    bottom: calc(112px + env(safe-area-inset-bottom, 0px));
-    max-width: calc(100% - 28px);
+    /* Kartu prompt juga menyingkir dari peta kecil: rata kiri, di atas baris
+       petunjuk gestur, dengan inset kanan yang sama. */
+    left: calc(14px + env(safe-area-inset-left, 0px));
+    right: calc(122px + env(safe-area-inset-right, 0px));
+    bottom: calc(162px + env(safe-area-inset-bottom, 0px));
+    max-width: none;
     padding: 9px 13px 9px 10px;
+    transform: none;
+    animation: prompt-in-side 0.18s ease both;
+  }
+
+  @keyframes prompt-in-side {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .hud.touch .prompt-copy strong {
@@ -558,8 +577,10 @@
       left: 16px;
       top: 16px;
     }
+    /* Sisi kanan dipakai peta kecil, jadi baris petunjuk membungkus di kiri. */
     .dock {
       left: 16px;
+      right: 168px;
       bottom: 68px;
     }
   }

@@ -108,8 +108,9 @@ Portofolio/
     │   ├── groundLayers.js    # Ketinggian lapisan hiasan lantai (anti z-fighting)
     │   └── canvasTextures.js  # Tekstur dinamis: kertas, nama, prompt, wajah roh, kertas papan
     ├── ui/
-    │   ├── Hud.svelte         # Identitas, tombol suara/fisika/indeks/panduan, prompt E
-    │   ├── MuseumIndex.svelte # Indeks seluruh arsip (bagian, proyek, pengunjung, papan)
+    │   ├── Hud.svelte         # Identitas, tombol suara/fisika/peta/panduan, prompt E
+    │   ├── MuseumIndex.svelte # Peta museum langsung: denah dibaca dari `world`
+    │   ├── MiniMap.svelte     # Peta kecil di sudut layar: posisi karakter + penanda koleksi
     │   ├── MuseumPanel.svelte # Panel 2D di atas museum + navigasi antar bagian
     │   ├── SeatHud.svelte     # Bilah permainan saat duduk di meja judi (orang pertama)
     │   ├── views/             # Isi panel: Home, About, Skills, Projects, Board, dsb.
@@ -328,7 +329,7 @@ Ganti sebelum produksi.
 | Testimoni | `BoardView` | **Papan pengunjung**: kertas dipaku (klik untuk membaca, filter kategori) + mekanik ambil kertas, cap kategori, tempel, status persetujuan |
 | Kedai Kartu | `SeatHud` (bukan panel) | **Mini-game blackjack orang pertama**: duduk di meja, kartu 3D di atas kain, bilah HUD di bawah. Jimat & kutukan baru terbuka **babak 3**; tiga tingkat kesulitan (default Normal), saldo di `localStorage` |
 
-Navigasi: pemain harus **mendatangi** meja, bingkai, NPC, atau papan. `MuseumIndex`, tombol
+Navigasi: pemain harus **mendatangi** meja, bingkai, NPC, atau papan. Peta museum (`I`), tombol
 navigasi di panel, dan kartu proyek di Galeri semuanya mengantar karakter ke tujuan
 (`PortfolioApp.visitView()` / `visitStation()`); panel tidak bisa dibuka langsung dari
 daftar, rail bagian dan tombol angka sudah dihapus, dan detail proyek baru terbuka
@@ -4198,5 +4199,479 @@ tidak boleh “mengarang” CV tandingan yang bisa berbeda urutan, gaya, atau is
   pastikan isi PDF tampil di panel; (2) tekan **Unduh CV (PDF)** → berkas yang terunduh
   adalah PDF yang dipasang, bukan dokumen rakitan; (3) kosongkan `cv_url` → panel kembali
   ke halaman CV rakitan dan tombol **Cetak / Simpan PDF** memanggil dialog cetak.
+
+---
+
+### 50. Indeks diganti peta museum yang mengikuti dunia
+
+#### 50.1 Permintaan
+
+“Ganti indeks menjadi maps aja, mapsnya ini realtime mengikuti world yang sudah ada,
+jadinya jika ada perubahan pada world maka di mapsnya juga ikut.”
+
+Indeks lama adalah **daftar** (tab Bagian / Proyek / Pengunjung + pencarian). Daftar itu
+membaca `data` dari API, jadi ia hanya tahu isi database: tidak tahu posisi meja, tidak
+tahu bingkai mana yang sudah dibangun, tidak tahu pengunjung sedang berdiri di mana, dan
+tidak tahu karakter sedang berjalan ke mana. Peta menggantikannya sepenuhnya.
+
+#### 50.2 Sumber kebenaran: `PortfolioApp.getMapState()`
+
+Peta tidak punya denah sendiri. `src/app/PortfolioApp.js` menambah satu potret dunia:
+
+| Bagian potret | Asal di dunia |
+| --- | --- |
+| `half` | `world.museum.half` (`config.world.platformHalf`) |
+| `walls` | `world.museum.wallZ` / `wallX` (dihitung `Museum.buildWalls()`) |
+| `plaza.radius` | `world.museum.plazaRadius` (konstanta `PLAZA_RADIUS` yang sama dengan mesh lantai) |
+| `stations[]` | `world.exhibits.items` → `anchor`/`interaction`/`position` tiap koleksi, plus `ax`/`az` (pusat tapak), `rotation`, `shape`, dan `footprint` dari `mapFootprint(item)` |
+| `player` | `controller.position` + `controller.heading` + `isWalkingToPoint` |
+| `camera.yaw` | `CameraRig.yaw` |
+| `camera.view` | `cameraViewVector()` — vektor pandang datar dari matriks kamera yang merender |
+| `camera.pov` | `cameraPovVector()` — arah yang **digambar** peta (kebalikan `view`, lihat §50.10) |
+| `camera.halfAngle` | `cameraHalfAngle()` — FOV horizontal kamera (radian) |
+| `camera.reach` | `cameraPovReach()` — jangkauan pandang di lantai (m), ikut zoom & FOV |
+| `destination` | `world.getStation(pendingStationId).interaction` |
+| `marker` | `world.marker.group.position` bila penanda tujuan terlihat |
+
+Setiap koleksi diterjemahkan oleh `mapStationInfo(item)` menjadi `{ label, seal, accent, view }`
+berdasarkan `kind`: `project` (judul proyek, cap 作), `visitor` (nama + huruf awal), `board`,
+`game`, dan sisanya `section` (label/cap/aksen dari `SECTIONS`). Karena daftar penanda
+berasal dari `world.exhibits.items`, **peta otomatis ikut berubah** setiap kali proyek atau
+testimoni bertambah: `Exhibits` yang membuat bingkai dan NPC, peta hanya membacanya.
+
+#### 50.3 Komponen: `src/ui/MuseumIndex.svelte`
+
+Nama berkasnya tetap supaya impor di `App.svelte` dan riwayat dokumen tidak berubah, tetapi
+isinya sekarang peta:
+
+- `source` prop berupa fungsi (`() => app.getMapState()`), dipanggil **berulang** setiap
+  90 ms lewat `requestAnimationFrame` selama panel terbuka, lalu dilepas saat unmount.
+  Jadi pengunjung yang berjalan, karakter yang bergerak, dan rute yang sedang ditempuh
+  terlihat bergerak di peta.
+- Latar digambar sebagai SVG 1000 × 1000: pelat lantai, plaza pohon, lingkaran tinta,
+  dinding utara & barat (garis tebal), kerucut pandang kamera, garis putus-putus rute ke
+tujuan, dan penanda tujuan klik.
+- Penanda koleksi adalah **tombol HTML** yang diposisikan dengan `left/top` persen, bukan
+  elemen SVG interaktif. Alasannya aksesibilitas: `<button>` asli dapat fokus, punya nama,
+  dan tidak memicu peringatan `a11y_no_noninteractive_element_to_interactive_role`.
+- Ukuran penanda mengikuti jenisnya: meja bagian paling besar (cap dari `SECTIONS`), papan
+  dan meja kartu sedang, bingkai proyek kecil memanjang (meniru pigura), pengunjung bulat
+  kecil. Nama hanya selalu terlihat untuk meja bagian; bingkai dan pengunjung menampilkan
+  nama saat disorot/difokus agar peta 20+ bingkai tidak menjadi lautan teks — konsekuensinya
+  nama tidak terbaca di layar sentuh, jadi **daftar tempat** di kolom samping yang
+  membacakannya (lihat §50.6.2).
+- Klik penanda memanggil `onVisit(station.view)` — jalur yang sama dengan indeks lama
+  (`visitView()` → karakter berjalan → panel terbuka saat tiba). Tidak ada jalan pintas
+  untuk membuka panel langsung.
+- Kolom samping berisi tiga bagian: baris **legenda** yang sekaligus menjadi saringan daftar
+  (menekan baris yang aktif mengembalikan ke “semua”), kartu **Disorot** saat sebuah penanda
+  disentuh kursor, dan **daftar tempat** urut jarak dari karakter (lihat §50.6.2).
+- Skala peta diturunkan dari `half`: `span = half * 2 + 2`, sehingga museum yang diperbesar
+  atau dikecilkan tetap terpetakan penuh tanpa mengubah komponen.
+
+#### 50.4 Pintasan dan tombol
+
+- HUD: label tombol berubah **Indeks → Peta** (`onOpenIndex` → `onOpenMap`).
+- `I` sekarang benar-benar bekerja: `PortfolioApp.handleKeyDown()` memanggil
+  `callbacks.onToggleMap()`, jadi `I` membuka **dan** menutup peta. Sebelumnya tombol HUD
+  mencantumkan `I` tetapi tidak ada yang menanganinya.
+- `App.svelte`: state `indexOpen` → `mapOpen`, fungsi `openIndex()` → `openMap()` +
+  `toggleMap()`. `Esc` menutup peta sebelum panduan, dan peta ditutup otomatis saat panel,
+dialog pengunjung, atau kursi Kedai Kartu dibuka.
+- `HelpOverlay` menyebut “Peta” (bukan “Indeks”) di daftar papan ketik maupun daftar gestur
+  sentuh, dan menjelaskan bahwa denahnya bergerak mengikuti dunia.
+- Tombol yang sedang fokus mengabaikan `Space`/`Enter` pada `handleKeyDown`, jadi menekan
+  `Space` untuk mengaktifkan penanda peta tidak membuat karakter melompat di belakang panel.
+
+#### 50.5 Bingkai baris atas di peta
+
+Bingkai proyek `rank > 0` berbagi **tapak** dengan bingkai di bawahnya: di dunia 3D bedanya
+hanya `elevation` (dan titik berdiri yang lebih jauh). Selama peta memakai `anchor` apa
+adanya, dua penanda jatuh di koordinat yang sama dan hanya yang digambar terakhir (baris
+atas) yang terlihat — laporan “di peta cuma yang bawah tampil” adalah gejala dari hal yang
+sama: yang tampak hanya salah satu baris.
+
+Perbaikannya ada di `PortfolioApp.mapPinPosition(item, anchor)`: untuk `kind === 'project'`
+dengan `rank > 0`, penanda digeser **ke arah ruangan** (mengikuti arah `interaction − anchor`)
+sebesar `rank × 1,55 m` — persis selisih titik berdiri antar-baris di museum. Hasilnya
+kedua baris terlihat dan bisa dipilih, dan penanda baris atas menunjuk tempat pemain memang
+harus berdiri. `getMapState()` ikut mengirim `rank`, sehingga:
+
+- peta besar memberi bayangan bertumpuk pada cap penanda baris atas dan menulis
+  “Baris atas · dibaca dengan melangkah mundur” di kartu keterangan;
+- peta kecil menggambar penanda baris atas sedikit lebih besar (21 vs 16 unit SVG).
+
+#### 50.6 Peta kecil (`src/ui/MiniMap.svelte`)
+
+Selain peta penuh, museum menampilkan peta kecil yang **selalu terlihat** di sudut layar:
+
+| Aspek | Keputusan |
+| --- | --- |
+| Sumber | prop `source` yang sama (`app.getMapState()`) — bukan salinan denah |
+| Irama | `POLL_MS = 160` lewat `requestAnimationFrame`, dilepas saat unmount |
+| Isi | pelat lantai bergaris grid 2 m, plaza + pohon, dua dinding, kerucut pandang, titik koleksi berwarna aksen, rute beranimasi, bidik tujuan, dan sprite karakter |
+| Klik | seluruh kartu adalah `<button>` → `onOpen()` membuka peta penuh |
+| Bingkai | bingkai tinta + penjuru emas, strip `Peta · hidup`, kompas 北, garis pindaian, dan kaki `n titik · I Buka` |
+| Posisi | **kanan bawah** (`right: 30px; bottom: 96px`) di semua ukuran layar — lihat §50.6.1 |
+| Kapan tampil | hanya saat museum siap dan tidak ada panel, dialog, kursi, panduan, atau peta penuh |
+
+Peta kecil tidak menambah data dunia: semua angka yang digambar berasal dari `getMapState()`,
+jadi perubahan world (proyek baru, pengunjung yang disetujui, karakter yang berjalan)
+langsung terlihat di kedua peta.
+
+#### 50.6.1 Peta kecil: kanan bawah, gaya HUD game, tata letak sentuh
+
+**Permintaan.** “Rombak peletakan mini map mungkin bisa di kanan bawah, tampilannya agar lebih
+mirip game, dan pastikan bagus untuk mobile tidak mengganggu.”
+
+**Posisi.** Peta kecil sekarang **selalu kanan bawah**, di atas apa pun yang menempati sudut
+itu. Angka-angkanya dipilih dari tata letak HUD yang sudah ada, bukan kira-kira:
+
+| Layar | `right` | `bottom` | Lebar | Yang ada di bawahnya |
+| --- | --- | --- | --- | --- |
+| desktop >860 px | `30px` | `96px` | `172px` | cap 往生堂 (`bottom: 28px`) |
+| ≤860 px | `20px` | `86px` | `160px` | — |
+| ≤720 px (jendela sempit) | `16px` | `62px` | `132px` | baris tombol sistem yang turun ke `bottom: 20px` |
+| `pointer: coarse` | `12px + safe` | `74px + safe` | `96px` | bar tombol sistem setinggi ±46 px + `safe-area-inset-bottom` |
+| tinggi ≤460 px (ponsel mendatar) | — | — | — | **disembunyikan**, karena tinggi layar habis untuk diorama |
+
+**Tampilan.** Bingkai tinta dengan penjuru emas (`::before`/`::after` masing-masing dua
+sudut), strip atas `Peta` + titik “hidup” yang berkedip pelan, kompas 北, garis pindaian
+(`repeating-linear-gradient` 1 px tiap 3 px), kaki `n titik · I Buka`, dan bayangan keras
+`5px 5px 0`. Di dalam denah: lantai ber-pola grid 2 m, plaza + pohon, dua dinding tebal,
+kerucut pandang, rute putus-putus yang **berjalan** (`stroke-dashoffset`), bidik berlian di
+ujung rute, penanda beraksen (baris atas sedikit lebih besar + bergaris krem), dan sprite
+karakter blok. Semua denyut/animasi dimatikan pada `prefers-reduced-motion`.
+
+**Jangan bertabrakan di ponsel.** `Hud.svelte` menyisakan ruang kanan sebesar lebar peta
+kecil + tepi + jarak (`122px`):
+
+```css
+.hud.touch .dock  { left: 14px + safe; right: 122px + safe; bottom: 82px + safe }
+.hud.touch .prompt-card { left: 14px + safe; right: 122px + safe; bottom: 162px + safe }
+```
+
+Kartu prompt karena itu **rata kiri** (bukan di tengah) dan memakai animasi sendiri
+(`prompt-in-side`) — animasi lama memakai `translate(-50%)` sehingga kartu akan bergeser
+setengah lebar bila hanya `transform: none` yang dipasang. Baris petunjuk gestur ikut
+membungkus di kolom kiri itu, jadi teks tidak pernah berjalan di bawah peta. Di jendela
+sempit non-sentuh, `.dock` juga diberi `right: 168px` agar tidak menabrak peta.
+
+**Verifikasi.** Statis: blok `<script>` `MiniMap`/`Hud` lolos `new Function`, kurung CSS
+(52/52 dan 71/71) serta `{#if}`/`{#each}`/tag `span/svg/g/button` seimbang, dan tidak ada
+pemakaian `camera.view` sebagai arah gambar di komponen. **Belum dijalankan di peramban**
+(shell mesin ini masih gagal di WSL) — yang perlu dicek: (1) desktop 1920×1080 dan
+1366×768: peta tidak menutupi cap 往生堂 maupun kartu prompt; (2) ponsel 360×640: peta,
+petunjuk gestur, kartu prompt, dan bar tombol tidak saling menimpa, dan semuanya di atas
+`safe-area-inset`; (3) ponsel mendatar (tinggi ≤460 px): peta hilang dan diorama lega;
+(4) ketuk peta membuka peta penuh; (5) rute baru muncul saat karakter berjalan ke tujuan.
+
+#### 50.6.2 Daftar tempat di panel peta (nama objek di layar sentuh)
+
+**Keluhan.** “Fix pada mobile yang dimana gak keliatan nama nama objectnya mungkin bisa bikin
+list tersendiri yang akan memperlihatkan apa aja.”
+
+**Sebab.** Nama penanda memang **hanya** muncul saat disorot: `.pin-project .pin-label` dan
+`.pin-visitor .pin-label` disembunyikan, lalu ditampilkan oleh `:hover`/`:focus-visible`.
+Layar sentuh tidak punya hover, dan pada `≤620 px` aturan `.pin-label { display: none }`
+mempertegasnya. Jadi di ponsel denah hanya berisi cap segel tanpa satu pun nama.
+
+**Yang ditambahkan** (`src/ui/MuseumIndex.svelte`):
+
+| Bagian | Isi |
+| --- | --- |
+| Legenda → saringan | tiap baris sekarang `<button class="legend-btn">` dengan `aria-pressed`; menekan “Bingkai proyek” menyaring daftar ke bingkai saja, menekannya lagi kembali ke `all` |
+| Daftar tempat | `rosterGroups` → `<ul class="roster-list">` berisi **semua** koleksi yang dikelompokkan per jenis (bisa dilipat), diurut jarak dari karakter; tiap baris: cap segel beraksen, nama, `baris atas`, dan jarak `n.n m`. Detail di §50.6.3 |
+| Titik terdekat | baris yang sedang dituju (`station.active`, yaitu `nearestId`) diberi latar emas + garis tepi aksen (`class:here`) |
+| Terpilih | `class:on` pada baris yang diklik/ketuk (lihat §50.6.3) |
+| Judul | `Semua tempat` (atau nama jenis yang sedang disaring) + jumlah baris |
+
+Baris daftar **memilih**, bukan berjalan: `selectStation(station)` memasang `selectedId`,
+menandai penandanya di denah (cap beraksen + garis vermilion + namanya tetap tampil), dan
+mengisi kartu “Penanda terpilih” / bilah pilihan di bawah denah. Karakter baru berjalan
+setelah tombol **Datangi** ditekan (`visit(station)` → `onVisit` → `visitView`), dan peta
+menutup sendiri (`App.visitView()` memasang `mapOpen = false`). Mengetuk ulang penanda atau
+baris yang sama melepas pilihan.
+
+**Jebakan yang dijaga saat menulisnya:**
+
+1. **Kedip hover.** Versi pertama menyisipkan kartu “Disorot” ke kolom samping saat kursor
+   masuk. Kartu itu menambah tinggi isi → `.map-body` yang dulu `overflow-y: auto`
+   memunculkan bilah gulir → lebar kolom denah menyusut → penanda bergeser dari bawah
+   kursor → `mouseleave` → kartu hilang → bilah gulir hilang → penanda kembali → kursor
+   menyorotnya lagi. Siklus itu terlihat sebagai “muncul hilang, muncul hilang”.
+   Perbaikannya dua sisi: kartu itu **selalu dirender** (kosong = teks petunjuk), dan
+   `.map-body` sekarang `grid-template-rows: minmax(0, 1fr)` + `overflow: hidden` sehingga
+   tingginya tidak pernah berubah karena isi kolom samping; daftar yang bergulir sendiri.
+2. Baris daftar tidak memasang `hoveredId` sama sekali — kartu sembul yang menggeser baris
+   di bawah kursor akan memicu kedip yang sama.
+3. `.side` memakai `min-height: 0; overflow: hidden` agar satu-satunya area gulir di kolom
+   itu adalah `.roster-list`; di `≤900 px` gulirannya dilepas (`overflow: visible`) karena
+   lembarnya sudah bergulir — dua area gulir bersarang sulit dikendalikan dengan jari.
+4. Target sentuh: `.roster-row` minimal 44 px dan `.legend-btn` 40 px di `pointer: coarse`.
+
+**Verifikasi.** Statis: `<script>` `MuseumIndex` lolos `new Function`, kurung CSS 204/204,
+`{#if}` 13/13, `{#each}` 5/5, tag `button/span/div/ul/li/section/aside/svg` seimbang.
+**Belum dijalankan di peramban** (shell mesin ini masih gagal di WSL) — yang perlu dicek:
+(1) ponsel 360×640: nama 10 meja + semua bingkai terbaca di daftar, menyentuh satu baris
+memilihnya; (2) menekan “Bingkai proyek” menyaring daftar dan penandanya tidak ikut hilang
+dari denah; (3) desktop: menyorot penanda berulang kali tidak boleh berkedip, dan bilah
+gulir tidak muncul saat kartu terisi; (4) baris terdekat tersorot emas.
+
+#### 50.6.3 Klik = pilih, tab denah/daftar di layar sempit, dan daftar berkelompok
+
+**Permintaan.** “Fix ketika hover ke object pada map dia muncul hilang gitu datanginya. dan
+juga bikin bisa perkategori untuk listnya itu dan juga kalau dimobile ada diatas map itu box
+map dan list object semacam itu lah tulisan yang dimana ketika klik maka akan menggantikan
+map dan sebaliknya nah ketika si user klik map maka akan langsung ke bagian map dan
+keselect gak langsung ketempatnya cuma keselect di map.”
+
+| Perubahan | Rincian |
+| --- | --- |
+| Penanda = pilih | `onclick={() => selectStation(station)}`, `aria-pressed`, label tombol “Pilih …”; berjalan hanya lewat tombol **Datangi** |
+| Penanda terpilih | `class:on` → cap naik + garis vermilion + nama tetap tampil (juga di `≤620 px`, tempat `.pin-label` disembunyikan) |
+| Daftar berkelompok | `rosterGroups`: `KIND_ORDER = ['section','project','board','game','visitor']`, tiap grup `<button class="group-btn" aria-expanded>` yang bisa dilipat, baris di dalamnya diurut jarak dari karakter |
+| Urutan tetap | grup disusun menurut `KIND_ORDER`, bukan jarak antar-jenis, supaya baris tidak berpindah tempat saat karakter berjalan |
+| Saringan legenda | tetap ada; menyaring ke satu jenis menyisakan satu grup |
+| Tab `Peta` / `Daftar objek` | `viewMode` (`'map'` \| `'list'`) + `.view-tabs` yang hanya muncul di `≤900 px`: `map-mode` menyembunyikan `.side`, `list-mode` menyembunyikan `.stage-wrap` — jadi daftar **menggantikan** denah, tidak menumpuk di bawahnya |
+| Bilah pilihan | `.stage-pick` di bawah denah (hanya layar sempit): cap + nama + jenis + jarak + **Datangi**; di desktop kartu kolom samping yang mengisi peran itu |
+
+Catatan CSS yang mudah salah:
+
+- `.stage-wrap` memakai `display: grid`, dan **`display` mengalahkan atribut `hidden`** —
+  jadi `hidden` di Svelte (`{#if}`/`class:hidden`) tidak akan menyembunyikan apa pun sampai
+  ada aturan `.stage-wrap[hidden] { display: none }`. Karena itu penyembunyian di sini
+  memakai tombol kelas (`map-mode`/`list-mode`), bukan atribut.
+- `.map-body` di `≤900 px` kembali `overflow-y: auto` dengan `grid-template-rows: auto`,
+  dan `.roster { flex: 0 0 auto }` + `.roster-list { flex: none; max-height: none }` — satu
+  area gulir saja (lembar), bukan dua yang bersarang.
+
+**Verifikasi.** Statis saja (seluruh blok lolos parse, kurung CSS 204/204, semua tag
+seimbang). **Belum dicoba di peramban** — yang perlu dicek: (1) ketuk penanda di ponsel →
+penanda menyala + nama muncul + bilah pilihan terisi, karakter **tidak** bergerak; (2) tekan
+Datangi → karakter berjalan, peta menutup, panel terbuka saat tiba; (3) tab “Daftar objek”
+menggantikan denah, tab “Peta” mengembalikannya; (4) lipat/buka grup “Bingkai proyek” dengan
+20+ bingkai; (5) di desktop kedua tab tidak muncul dan denah+daftar tetap berdampingan.
+
+#### 50.6.4 Kolom samping: daftar paling atas, bisa digulir, tidak melimpah dari kotak
+
+Tiga keluhan setelah tab dan daftar berkelompok dipasang:
+
+| Keluhan | Sebab | Perbaikan |
+| --- | --- | --- |
+| Di ponsel isi kotak “Semua tempat” keluar dari kotaknya | (a) `.roster-list`, `.roster-group`, `.group-rows`, `.legend` memakai `display: grid` **tanpa** `grid-template-columns`, jadi kolom implisit `auto` mengikuti `max-content` anaknya; (b) `.map-sheet` hanya punya `max-height`, bukan `height`, sehingga `.map-body` (flex: 1) tetap setinggi isinya — daftar panjang membuat isi lembar terpotong `overflow: hidden` tanpa ada yang bisa digulir; (c) `.side` dua kolom `1fr 1fr` mempersempit panel sampai nama tidak muat | (a) `grid-template-columns: minmax(0, 1fr)` + `min-width: 0` pada semua wadah, `.roster-row`/`.group-btn`/`.legend-btn`/`.legend li` juga `min-width: 0`; (b) `.map-sheet` diberi **tinggi definitif** `height: min(94dvh, 880px)` (ponsel `96dvh`) sehingga `.map-body` benar-benar jadi area gulir; (c) `.side` memakai `repeat(auto-fit, minmax(min(230px, 100%), 1fr))` — satu kolom di ponsel, dua di tablet, dan jalur minimumnya tidak pernah lebih lebar dari wadah |
+| Di desktop daftar **tidak bisa digulir** | `.panel { flex: 0 0 auto }` berlaku juga untuk `.roster`, sehingga panel setinggi seluruh isinya. `.roster-list` jadi tidak punya tinggi terbatas → `overflow-y: auto` tidak pernah aktif, dan kelebihannya terpotong oleh `.side { overflow: hidden }`. | `.roster { flex: 1 1 auto; min-height: 0 }` — panel mengisi sisa kolom, daftar di dalamnya yang bergulir; `.roster-head` `flex: 0 0 auto`; bilah gulir tipis bergaya tinta |
+| “Semua tempat” harus di atas (desktop) | urutan DOM: kartu terpilih → legenda → daftar | `.roster { order: -1 }` di desktop saja; di `≤900 px` `order: 0` karena di sana legenda berperan sebagai saringan dan pantas berada di atas isi yang disaringnya |
+| Label penanda menembus tepi papan | `.pin-label` `position: absolute; top: 100%` tidak terpotong apa pun | `.frame { overflow: hidden }` — papan yang memotong, bukan halaman yang melebar |
+
+Jaring pengaman lain: `.map-body` `overflow-x: hidden`, `overscroll-behavior: contain`,
+`-webkit-overflow-scrolling: touch`, dan di `≤900 px` `grid-auto-rows: min-content` +
+`align-content: start` supaya baris tidak menggelembung. Untuk jendela pendek-lebar
+(`max-height: 640px` dan `min-width: 901px`) `.side` sendiri yang bergulir dan `.roster`
+diberi `min-height: 132px`.
+
+**Verifikasi.** Statis: `script` lolos `new Function`, kurung CSS 214/214. **Belum dijalankan di
+peramban** — yang perlu dicek: (1) desktop 1366×768 dengan 20+ bingkai: daftar bergulir di
+dalam panelnya, kolom denah tidak menyusut; (2) 360×640: tidak ada teks yang keluar dari kotak
+panel, nama panjang dipotong `…`, dan lembar 96dvh bisa digulir sampai baris terakhir;
+(3) desktop: panel “Semua tempat” berada di atas kartu penanda dan legenda; di ponsel
+saringan tetap di atas daftar.
+
+#### 50.7 Verifikasi
+
+- `MuseumIndex.svelte`, `App.svelte`, `Hud.svelte`, `HelpOverlay.svelte`,
+  `PortfolioApp.js`, `Museum.js`: blok `<script>` lolos `new Function` (kecuali
+  `App.svelte` yang memakai `import.meta`, bukan kesalahan sintaks), `{#if}` 5/5,
+  `{#each}` 1/1, dan seluruh tag `div/button/span/svg/p/section/style/header/footer/aside/li`
+  seimbang. Tidak ada sisa `indexOpen`/`onOpenIndex`/`{@const}` di `src/`.
+- `world.museum.wallZ`/`wallX` sudah ada sejak §20 (dipakai menyembunyikan dinding saat
+  kamera berputar), jadi peta memakai nilai yang sama dengan geometri dinding.
+- **Belum dijalankan di peramban** (shell mesin ini masih gagal di WSL). Yang perlu dicoba:
+  (1) tekan `I` → peta terbuka dengan penanda di posisi meja yang benar; (2) klik tanah
+  lalu lihat titik karakter bergerak dan garis rute memendek; (3) klik penanda proyek
+  terjauh → karakter berjalan dan panel proyek terbuka; (4) setujui testimoni di dashboard,
+  muat ulang museum → penanda pengunjung bertambah; (5) putar kamera (seret kanan) →
+  kerucut pandang ikut berputar; (6) di ponsel, peta menyusun ulang satu kolom dan penanda
+  tetap bisa diketuk; (7) dengan 25+ proyek (dua baris rak), setiap kolom harus punya
+  **dua** penanda yang bisa dipilih, dan yang atas membuka proyek baris atas; (8) peta
+  kecil di sudut layar ikut menunjukkan karakter berjalan, dan mengetuknya membuka peta
+  penuh.
+
+#### 50.8 Arah karakter di peta + gaya piksel
+
+**Kenapa arahnya tampak tidak berubah.** Peta lama menggambar arah sebagai satu garis
+`36` unit dari pusat, sedangkan lingkaran karakter berdiameter `22` unit dengan garis tepi
+`3` unit — jadi yang terlihat hanya ujung garis sepanjang ±12 px yang tertutup separuh
+oleh badannya sendiri. Nilainya memang berubah, tetapi tidak terbaca sebagai arah.
+
+Sekarang karakter digambar sebagai **sprite blok** di dalam `<g>` yang diputar:
+
+```svelte
+<g class="avatar" transform={`translate(${playerPoint.x} ${playerPoint.y}) rotate(${-facingDeg})`}>
+```
+
+- `facingDeg = heading × 180/π`; tanda **negatif** dipakai karena `rotate()` SVG berputar
+  searah jarum jam, sedangkan `heading` dunia dihitung berlawanan jarum jam di sekitar
+  sumbu +Y. Tanpa tanda minus, karakter menghadap ke arah yang berlawanan.
+- Sprite digambar menghadap +Y (bawah layar) karena `heading = 0` berarti menghadap +Z,
+  dan +Z di peta juga ke bawah. Isinya: bayangan, badan 36×36 bergaris tinta 3, pelat
+  muka krem, dua mata, dan **panah 86 unit** — cukup panjang untuk terbaca di 470 px.
+- Peta kecil memakai sprite yang sama dengan garis krem (latar gelap).
+
+**Bahasa rupa piksel (tanpa meninggalkan tema tinta/kertas).**
+
+| Bagian | Perlakuan |
+| --- | --- |
+| Lantai | `shape-rendering="crispEdges"` + pola `<pattern>` grid 2 m, bukan gradien |
+| Plaza, lingkaran tinta, pohon | `pixelRing()` membulatkan tiap titik ke kisi → tepi bertangga |
+| Dinding | balok tinta 14 unit + garis terang `dasharray 18 14` sebagai sambungan batu |
+| Kerucut kamera | pola kotak-kotak (*dither*) 50% alih-alih bidang transparan |
+| Rute | garis putus `12 10`, ujung `butt` (bukan bulat) |
+| Tujuan | bidik piksel empat blok, bukan cincin |
+| Penanda | cap persegi 2 px tinta + bayangan keras `3px 3px 0`, label mono berbingkai |
+| Judul | `--font-mono` huruf besar + bayangan tinta-merah `3px 3px 0` |
+| Lembar | sudut 0, garis 2 px, bayangan keras `10px 10px 0`, pita piksel di tepi atas |
+| Tombol | kotak, `box-shadow` keras, `:active` bergeser 2 px |
+| Transisi | `steps(2, end)` supaya gerak terasa 8-bit, bukan halus |
+
+**Jebakan yang tertangkap saat mengerjakan ini:** atribut presentasi `fill="url(#map-grid)"`
+**kalah** oleh aturan CSS mana pun untuk properti yang sama. Sempat ada
+`.floor-grid { fill: none }`, dan hasilnya grid lantai hilang tanpa pesan galat. Aturan itu
+dihapus; pola sekarang hanya diatur lewat atribut. Aturan umum: jangan menulis properti
+SVG untuk elemen yang sudah membawa atribut presentasi, kecuali memang mau menimpanya.
+
+**Belum dijalankan di peramban** (shell mesin ini masih gagal di WSL). Yang perlu dicoba:
+berjalan ke arah berbeda dan pastikan panah sprite ikut berputar (bukan hanya titiknya
+bergerak); periksa grid lantai terlihat tipis tetapi tidak mengganggu; dan pastikan
+`crispEdges` tidak membuat teks label penanda ikut kasar (label memakai HTML, bukan SVG).
+
+#### 50.9 Kerucut pandang dibaca dari kamera, bukan ditebak dari `yaw`
+
+**Gejala.** Penanda merah “arah/area pandang” di peta tidak mengikuti apa yang terlihat
+di layar 3D: kadang menghadap ke sisi yang berlawanan, dan setelah memutar kamera (seret
+kanan) arahnya benar untuk satu posisi lalu menyimpang lagi.
+
+**Sebab.** `getMapState()` hanya mengirim `camera: { yaw }`, lalu peta menghitung arahnya
+sendiri dengan `-sin(yaw)` / `-cos(yaw)`. Rumus itu benar hanya bila tandanya tepat, dan
+karena dihitung di komponen tampilan (bukan diambil dari kamera), ia gampang menyimpang:
+
+- arah pandang = **−**(sin yaw, cos yaw); satu tanda yang salah membuat kerucut bercermin,
+  dan itu tidak terlihat sebagai “rumus salah”, melainkan sebagai “arahnya tidak mengikuti”;
+- `yaw` bisa belum sama dengan `yawTarget` saat rotasi bertahap masih meluncur;
+- mode duduk Kedai Kartu memakai `seatYaw`/`seatPitch` sendiri, bukan `yaw` diorama;
+- `bounds` kamera dan mode dialog menggeser fokus, jadi arah datarnya tidak lagi sama
+  dengan `yaw`;
+- lebar pandang berubah di layar potret karena `Engine.resize()` melebarkan FOV, sedangkan
+  peta memakai sudut tetap.
+
+**Perbaikan (satu sumber kebenaran).** Peta tidak lagi menebak. `PortfolioApp` menambah
+tiga metode yang membaca kamera yang benar-benar merender:
+
+```js
+cameraViewVector()   // camera.getWorldDirection() → arah datar ternormalisasi { x, z }
+cameraPovVector()    // kebalikan cameraViewVector() — arah yang DIGAMBAR peta
+cameraHalfAngle()    // atan(tan(fov/2) × aspect), dipangkas 0,28–0,95 rad
+cameraPovReach()     // jarak × tan(fov/2) / sin(pitch) → jangkauan di lantai (m)
+```
+
+`getMapState()` mengirim keempatnya (`camera.view`, `camera.pov`, `camera.halfAngle`,
+`camera.reach`) plus `camera.distance`. `MuseumIndex` dan `MiniMap` memakai `camera.pov`
+sebagai arah kerucut, `camera.halfAngle` sebagai separuh lebarnya, dan `camera.reach`
+sebagai panjangnya — cadangan `sin/cos(yaw)` hanya dipakai bila vektor kamera hampir tegak
+lurus ke bawah (tidak punya arah datar). Karena keduanya membaca potret yang sama, kedua
+peta tidak mungkin menunjukkan arah atau panjang yang berbeda.
+
+Hal yang tidak boleh diulang: **jangan menurunkan arah pandang dari `rig.yaw`.** Nilai itu
+untuk memutar diorama, bukan untuk menentukan apa yang sedang dilihat.
+
+#### 50.10 Arah kerucut dibalik & panjangnya mengikuti zoom
+
+**Keluhan.** “Merah-merah itu kebalik, seharusnya di depan malah ke belakang”, dan
+“jangkauan pandangnya harus ikut waktu di-scroll”.
+
+**Pembalikan tanda.** `cameraViewVector()` menunjuk dari kamera menuju fokus — di denah ia
+menjauh dari pemain. Di diorama ini sisi yang terbaca sebagai “depan” adalah sisi yang
+menghadap kamera (karakter pun menghadap kamera saat museum dimuat, §14.2), sehingga
+kerucut yang mengikuti vektor pandang kamera terlihat sebagai “di belakang karakter”.
+Karena itu pembalikan dikerjakan **sekali** di `cameraPovVector()`:
+
+```js
+cameraPovVector() {
+  const view = this.cameraViewVector()
+  return { x: -view.x, z: -view.z }
+}
+```
+
+Yang dikirim ke peta adalah `camera.pov`, dan bearing di telemetri HUD (`Arah 135°`)
+dihitung dari vektor yang sama — jadi angka di bar atas selalu cocok dengan gambar
+kerucutnya. **Jangan membalik lagi di komponen**: satu tanda, satu tempat.
+
+**Jangkauan mengikuti zoom.** Dulu panjang kerucut tetap (`10,5` m di peta besar, `7,5` m
+di peta kecil), jadi men-scroll tidak mengubah apa pun. Sekarang panjangnya diturunkan
+dari kamera:
+
+```
+ground = distance × tan(fov/2) ÷ sin(pitch)   // setengah tinggi layar di lantai
+reach   = clamp(ground, 3,5 m … 15 m)
+```
+
+Dengan `distance` 18, `fov` 32°, `pitch` 0,58 rad → **9,4 m**. Zoom masuk ke
+`minDistance` 10 → 5,2 m; zoom keluar ke `maxDistance` 28 → 14,7 m. FOV ikut terpakai,
+jadi di layar potret (FOV dilebarkan `Engine.resize()`) kerucut juga melebar dan memanjang
+seperti pandangan sesungguhnya. Peta kecil mengalikan hasilnya dengan `0,8` dan memangkas
+3–9 m supaya tidak menutupi seluruh denahnya.
+
+**Verifikasi.** Statis: blok `<script>` `MuseumIndex`/`MiniMap`/`PortfolioApp` lolos
+`new Function`, tag dan kurung seimbang, dan tidak ada lagi pemakaian `camera.view`
+sebagai arah gambar di komponen. **Belum dijalankan di peramban** (shell mesin ini masih
+gagal di WSL) — yang perlu dicek: (1) kerucut menunjuk sisi yang sama dengan arah hadap
+karakter saat museum baru dimuat; (2) scroll zoom masuk/keluar, kerucut memendek/memanjang
+bertahap; (3) seret kanan 360°, kerucut ikut berputar dan bearing di HUD berubah searah;
+(4) peta kecil menunjukkan arah dan panjang yang sama dengan peta besar.
+
+#### 50.11 Peta dirombak: bar HUD, denah ruangan, panel samping
+
+Peta sebelumnya hanya “kertas kosong + titik-titik + satu kalimat bantuan”. Versi ini
+disusun seperti peta di dalam permainan: informasi di tepi, denah di tengah, keterangan
+di samping.
+
+**Tata letak (`src/ui/MuseumIndex.svelte`).**
+
+| Bagian | Isi |
+| --- | --- |
+| Bar atas | segel 圖, label “Peta hidup · dibaca dari dunia 3D” dengan titik berdenyut, judul mono, **telemetri** X · Z · Arah (bearing °) · Langkah (Berjalan/Diam), tombol Tutup |
+| Papan denah | bingkai tinta + empat penjuru, SVG 1000×1000 dengan arsiran di luar lantai, grid 2 m, plaza/lingkaran tinta/mahkota pohon bergaya piksel (`pixelRing()`), dinding utara & barat, tepi terbuka timur & selatan, label zona, kompas 北, skala 5 m |
+| Penanda | tombol HTML di atas denah; cap persegi (meja), pigura memanjang (bingkai proyek), bulat (pengunjung), cap sedang (papan & meja kartu). Bingkai/pengunjung hanya menampilkan nama saat disorot, agar 20+ bingkai tidak menjadi lautan teks |
+| Panel samping | Legenda berisi hitungan per jenis, lalu **Disorot** (jenis, nama, jarak, tombol Datangi) atau **Terdekat darimu** (tiga koleksi terdekat) |
+| Kaki | jumlah penanda, hint tombol `I`, tombol “Kembali ke museum” |
+
+**Tapak perabot, bukan hanya titik.** `PortfolioApp.mapFootprint(item)` mengirim bentuk
+tapak dari ukuran benda aslinya, sehingga denah terbaca sebagai ruangan:
+
+| Jenis | Tapak |
+| --- | --- |
+| `section` | persegi 1,62 × 1,08 m |
+| `project` | `item.width` × 0,72 m (bingkai baris atas memakai tapak yang sama, hanya penandanya yang bergeser) |
+| `board` | `config.width` × 0,52 m |
+| `game` | lingkaran `collider.radius` (1 m) |
+| `visitor` | `person` — tidak digambar, karena mereka berjalan |
+
+**Jebakan tanda rotasi (sama seperti sprite karakter).** Tapak digambar dengan
+`rotate(-rotationY × 180/π)`, **bukan** `rotate(+rotationY …)`. Di three.js
+`rotation.y = θ` memutar sumbu lokal +X ke arah `(cos θ, −sin θ)` pada bidang (x, z),
+sedangkan `rotate(φ)` SVG memutar searah jarum jam. Tanpa tanda minus, bingkai proyek di
+dinding barat akan berdiri melintang ke dalam ruangan.
+
+**Label penanda digantung absolut** (`position: absolute; top: 100%`) supaya tinggi tombol
+hanya ditentukan capnya — dengan begitu pusat cap jatuh tepat di koordinat koleksi.
+
+**Verifikasi.** Hanya statis: seluruh blok `<script>`, markup, dan `<style>`
+`MuseumIndex.svelte`/`MiniMap.svelte` dibaca ulang dan seimbang, semua kelas CSS yang
+dipakai ada elemennya, dan `getMapState()` mengirim `camera.view`/`camera.halfAngle`,
+`ax`/`az`/`rotation`/`shape`/`footprint`. **Belum dijalankan di peramban** (shell mesin ini
+masih gagal di WSL) — yang perlu dicek: (1) putar kamera penuh 360° dan pastikan kerucut
+merah di peta ikut berputar searah layar; (2) duduk di Kedai Kartu lalu berdiri, kerucut
+tetap benar; (3) buka peta dengan 20+ proyek dan pastikan tapak bingkai tidak melintang;
+(4) periksa panel samping tidak memotong denah di layar 1366×768 dan di ponsel potret.
 
 

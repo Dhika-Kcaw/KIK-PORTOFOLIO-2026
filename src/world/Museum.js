@@ -23,6 +23,9 @@ import {
 } from './canvasTextures.js'
 import { GROUND_LAYER } from './groundLayers.js'
 
+/** Radius lempeng plaza di tengah museum; dipakai juga oleh peta 2D. */
+const PLAZA_RADIUS = 5.2
+
 /**
  * Museum: paviliun terbuka bergaya arsip.
  *
@@ -35,6 +38,9 @@ export class Museum {
     this.group = new Group()
     this.group.name = 'museum'
     this.half = config.world?.platformHalf ?? 18
+    // Radius plaza disimpan sebagai properti supaya peta 2D menggambar lantai
+    // yang benar-benar ada di dunia, bukan angka salinan yang bisa menyimpang.
+    this.plazaRadius = PLAZA_RADIUS
     this.colliders = []
     this.textures = []
     this.materials = []
@@ -136,13 +142,13 @@ export class Museum {
     })
     this.materials.push(plazaMat, plazaEdgeMat)
 
-    const plaza = new Mesh(new CircleGeometry(5.2, 64), plazaMat)
+    const plaza = new Mesh(new CircleGeometry(PLAZA_RADIUS, 64), plazaMat)
     plaza.rotation.x = -Math.PI / 2
     plaza.position.y = GROUND_LAYER.plaza
     plaza.receiveShadow = true
     this.group.add(plaza)
 
-    const plazaEdge = new Mesh(new RingGeometry(5.2, 5.34, 64), plazaEdgeMat)
+    const plazaEdge = new Mesh(new RingGeometry(PLAZA_RADIUS, PLAZA_RADIUS + 0.14, 64), plazaEdgeMat)
     plazaEdge.rotation.x = -Math.PI / 2
     plazaEdge.position.y = GROUND_LAYER.plazaEdge
     this.group.add(plazaEdge)

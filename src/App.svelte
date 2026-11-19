@@ -11,6 +11,7 @@
   import VisitorDialog from './ui/VisitorDialog.svelte'
   import WebEmbedModal from './ui/WebEmbedModal.svelte'
   import LoadingScreen from './ui/LoadingScreen.svelte'
+  import MiniMap from './ui/MiniMap.svelte'
 
   let container = $state(null)
   let app = null
@@ -28,7 +29,7 @@
   // Duduk di meja judi: dunia jadi orang pertama, panel 2D tidak dipakai.
   let seated = $state(false)
   let embedProject = $state(null)
-  let indexOpen = $state(false)
+  let mapOpen = $state(false)
   let helpOpen = $state(true)
   let prompt = $state(null)
   let controlMode = $state(CONFIG.controls.defaultMode)
@@ -44,7 +45,7 @@
       !activeView &&
       !activeTestimonial &&
       !embedProject &&
-      !indexOpen &&
+      !mapOpen &&
       !seated
     if (app) app.setHelpVisible(visible)
   })
@@ -64,13 +65,13 @@
       onOpenView: (view) => {
         activeView = view
         activeTestimonial = null
-        indexOpen = false
+        mapOpen = false
         helpOpen = false
       },
       onTestimonial: (testimonial) => {
         activeTestimonial = testimonial
         activeView = null
-        indexOpen = false
+        mapOpen = false
         helpOpen = false
       },
       // Duduk/berdiri dari meja judi. Dunia dikendalikan `SeatHud`.
@@ -78,7 +79,7 @@
         seated = Boolean(state?.open)
         if (state?.open) {
           helpOpen = false
-          indexOpen = false
+          mapOpen = false
           activeView = null
           activeTestimonial = null
         }
@@ -104,6 +105,8 @@
       onMuteChange: (value) => {
         muted = value
       },
+      // Tombol I: buka/tutup peta museum tanpa memindahkan karakter.
+      onToggleMap: toggleMap,
     })
 
     if (import.meta.env.DEV) window.__portfolioApp = app
@@ -148,8 +151,8 @@
         closeView()
         return
       }
-      if (indexOpen) {
-        indexOpen = false
+      if (mapOpen) {
+        mapOpen = false
         return
       }
       if (helpOpen) helpOpen = false
@@ -194,21 +197,31 @@
 
   /**
    * Satu-satunya cara membuka bagian: karakter harus berjalan ke meja/bingkai/NPC
-   * yang bersangkutan. Indeks dan tombol di panel hanya mengantar ke sana.
+   * yang bersangkutan. Peta dan tombol di panel hanya mengantar ke sana.
    */
   function visitView(view) {
     if (!view) return
     if (activeView || activeTestimonial) closeView()
-    indexOpen = false
+    mapOpen = false
     helpOpen = false
     app?.startAudio()
     app?.visitView(view)
   }
 
-  function openIndex() {
+  function openMap() {
     app?.startAudio()
     helpOpen = false
-    indexOpen = true
+    mapOpen = true
+  }
+
+  function toggleMap() {
+    if (!ready) return
+    if (mapOpen) {
+      mapOpen = false
+      return
+    }
+    if (activeView || activeTestimonial || seated) return
+    openMap()
   }
 
   function closeHelp() {
@@ -232,19 +245,25 @@
       {muted}
       {prompt}
       {touch}
-      hidden={Boolean(activeView || activeTestimonial || embedProject || indexOpen || seated)}
+      hidden={Boolean(activeView || activeTestimonial || embedProject || mapOpen || seated)}
       onToggleMode={toggleMode}
       onTogglePhysics={togglePhysics}
       onToggleMute={toggleMute}
-      onOpenIndex={openIndex}
+      onOpenMap={openMap}
       onToggleHelp={() => (helpOpen = !helpOpen)}
     />
   {/if}
 
-  {#if ready && indexOpen && !activeView && !seated}
+  {#if ready && !mapOpen && !activeView && !activeTestimonial && !embedProject && !seated && !helpOpen}
+    <!-- Peta kecil: gambar hidup yang sama dengan peta besar, tanpa menghalangi dunia. -->
+    <MiniMap source={() => app?.getMapState() ?? null} onOpen={openMap} />
+  {/if}
+
+  {#if ready && mapOpen && !activeView && !seated}
     <MuseumIndex
-      data={portfolio}
-      onClose={() => (indexOpen = false)}
+      source={() => app?.getMapState() ?? null}
+      title={portfolio?.profile?.name ?? ''}
+      onClose={() => (mapOpen = false)}
       onVisit={visitView}
     />
   {/if}
@@ -285,7 +304,7 @@
     />
   {/if}
 
-  {#if ready && helpOpen && !activeView && !activeTestimonial && !embedProject && !indexOpen && !seated}
+  {#if ready && helpOpen && !activeView && !activeTestimonial && !embedProject && !mapOpen && !seated}
     <HelpOverlay {touch} onClose={closeHelp} />
   {/if}
 

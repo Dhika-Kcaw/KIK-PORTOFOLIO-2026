@@ -126,9 +126,11 @@ bun run start      # API + serve dist/ dari satu port (produksi lokal)
   panel, dan baru menjadi NPC pengunjung serta kertas permanen setelah disetujui admin di
   dashboard.
 - **Uji web langsung** — proyek dengan tautan demo bisa dijalankan di dalam iframe modal.
-- **Indeks museum** — peta semua bagian, proyek, dan pengunjung; memilih satu tujuan
-  membuat karakter berjalan ke sana (bukan membuka panel dari jauh).
-- **Mode gelap/terang**, animasi pergantian panel, panduan kontrol, dan tombol kembali.
+- **Peta museum** — denah museum yang dibaca langsung dari dunia 3D: posisi karakter,
+pengunjung yang berjalan, arah kamera, dan setiap meja/bingkai/papan. Memilih satu
+tujuan membuat karakter berjalan ke sana (bukan membuka panel dari jauh). Peta kecil di
+sudut layar menampilkan potret yang sama sepanjang penjelajahan; ketuk untuk memperbesar.
+- **Panduan kontrol**, animasi pergantian panel, dan tombol kembali ke museum.
 - **Animasi berlapis** — klip VMD idle/jalan/lari plus pose lompat, mendarat, lambaian,
   sorakan, dan variasi idle.
 - **Suara prosedural** — langkah, lompat, blip UI, buka-tutup panel dari WebAudio.
@@ -152,7 +154,7 @@ papan ketik virtual tidak pernah muncul.
 | Ketuk meja / proyek / pengunjung | Berjalan ke sana lalu membuka panel |
 | Seret satu jari | Putar diorama 15° per langkah (360°) |
 | Cubit dua jari | Zoom masuk / keluar |
-| Tombol bawah | Indeks, suara, fisika, panduan |
+| Tombol bawah | Peta, suara, fisika, panduan |
 | `×` / Kembali | Tutup panel |
 
 Tombol sistem turun menjadi satu baris di bagian bawah layar; ukurannya 46 px
@@ -172,7 +174,7 @@ agar nyaman disentuh ibu jari.
 | Scroll | Zoom kamera |
 | `R` | Kembalikan kamera |
 | `E` | Buka objek terdekat |
-| `I` | Indeks tujuan museum (mengantar berjalan) |
+| `I` | Peta museum (denah hidup; mengantar berjalan) |
 | `G` / `V` | Melambai / bersorak |
 | `P` | Fisika rambut dan kain |
 | `M` | Suara |
@@ -282,7 +284,7 @@ src/
 ├── core/                    # Engine, CameraRig isometrik, InputManager
 ├── content/museum.js        # Tata letak museum: meja, slot proyek, slot pengunjung
 ├── world/                   # Museum, Exhibits, InfoStation, ProjectFrame, Visitor
-├── ui/                      # HUD, panel + views, indeks, panduan, loading, embed
+├── ui/                      # HUD, panel + views, peta museum, panduan, loading, embed
 ├── admin/                   # Dashboard 2D (login, CRUD, upload, pesan)
 ├── config.js                # Kamera, gerak, animasi, audio, fisika
 └── main.js                  # Memilih museum 3D atau dashboard admin
